@@ -3,7 +3,8 @@ name: Release Pipeline
 # 执行 scripts/build-and-push.sh <版本号>（自动调用 gh workflow run）时触发：
 #   1) Go 自包含二进制（linux/amd64 + arm64，内嵌前端），生成 sha256 并创建 GitHub Release
 #   2) 构建并推送 multi-arch Docker 镜像（Docker Hub + GHCR）
-# 一次发版只产生一条 workflow run（jobs 链式：build-binaries -> publish-release -> build-docker）。
+#   3) 同步 Git 仓库与标签到 CNB 镜像仓库
+# 一次发版只产生一条 workflow run（jobs 链式：build-binaries -> publish-release -> build-docker -> sync-cnb）。
 # 注意：日常 push / 打 tag 不会触发本工作流。
 
 on:
@@ -188,3 +189,36 @@ jobs:
             GOPROXY=https://proxy.golang.org,direct
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  sync-cnb:
+    name: 同步到 CNB 镜像仓库
+    needs: build-docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ format('refs/tags/{0}', github.event.inputs.tag) }}
+
+      - name: Sync to CNB Repository
+        if: ${{ env.CNB_TOKEN != '' }}
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_ACCESS_TOKEN }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:${{ github.workspace }} \
+            -w ${{ github.workspace }} \
+            -e PLUGIN_TARGET_URL="https://cnb.cool/meimolihan/fan-video-ct.git" \
+            -e PLUGIN_AUTH_TYPE="https" \
+            -e PLUGIN_USERNAME="cnb" \
+            -e PLUGIN_PASSWORD="$CNB_TOKEN" \
+            -e PLUGIN_FORCE="true" \
+            -e PLUGIN_PUSH_TAGS="true" \
+            tencentcom/git-sync
+
+      - name: Skip CNB sync
+        if: ${{ env.CNB_TOKEN == '' }}
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_ACCESS_TOKEN }}
+        run: echo "::warning::CNB_ACCESS_TOKEN 未配置，跳过同步到 CNB 镜像仓库"
