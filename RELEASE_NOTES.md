@@ -1,13 +1,13 @@
-自动构建发布 v1.0.1
+优化结束锚点
 
 ## Docker 安装
 ```bash
 docker pull mobufan/fan-video-ct:latest
-docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.1
+docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.2
 ```
 
 ```bash
-docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.1
+docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.2
 ```
 
 ## 二进制安装
