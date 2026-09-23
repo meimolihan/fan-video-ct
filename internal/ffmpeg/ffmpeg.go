@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -92,6 +93,8 @@ type MediaStream struct {
 	BitRate   int64   `json:"bit_rate"`
 	PixFmt    string  `json:"pix_fmt"`
 	Profile   string  `json:"profile"`
+	// IsAttachedPic 是否为内嵌封面（attached_pic）流。
+	IsAttachedPic bool `json:"is_attached_pic"`
 }
 
 // MediaInfo 媒体文件探测结果。
@@ -112,15 +115,16 @@ type ffprobeFormat struct {
 }
 
 type ffprobeStream struct {
-	Index     int    `json:"index"`
-	CodecType string `json:"codec_type"`
-	CodecName string `json:"codec_name"`
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
-	Duration  string `json:"duration"`
-	BitRate   string `json:"bit_rate"`
-	PixFmt    string `json:"pix_fmt"`
-	Profile   string `json:"profile"`
+	Index       int            `json:"index"`
+	CodecType   string         `json:"codec_type"`
+	CodecName   string         `json:"codec_name"`
+	Width       int            `json:"width"`
+	Height      int            `json:"height"`
+	Duration    string         `json:"duration"`
+	BitRate     string         `json:"bit_rate"`
+	PixFmt      string         `json:"pix_fmt"`
+	Profile     string         `json:"profile"`
+	Disposition map[string]int `json:"disposition"`
 }
 
 type ffprobeOutput struct {
@@ -161,15 +165,16 @@ func (c *Client) Probe(ctx context.Context, path string) (*MediaInfo, error) {
 	info.FormatName = out.Format.FormatName
 	for _, s := range out.Streams {
 		info.Streams = append(info.Streams, MediaStream{
-			Index:     s.Index,
-			CodecType: s.CodecType,
-			CodecName: s.CodecName,
-			Width:     s.Width,
-			Height:    s.Height,
-			Duration:  parseFloat(s.Duration),
-			BitRate:   parseInt64(s.BitRate),
-			PixFmt:    s.PixFmt,
-			Profile:   s.Profile,
+			Index:         s.Index,
+			CodecType:     s.CodecType,
+			CodecName:     s.CodecName,
+			Width:         s.Width,
+			Height:        s.Height,
+			Duration:      parseFloat(s.Duration),
+			BitRate:       parseInt64(s.BitRate),
+			PixFmt:        s.PixFmt,
+			Profile:       s.Profile,
+			IsAttachedPic: s.Disposition["attached_pic"] == 1,
 		})
 	}
 	return info, nil
@@ -234,6 +239,75 @@ func parseInt64(s string) int64 {
 		return 0
 	}
 	return n
+}
+
+// ==================== 内嵌封面 ====================
+
+// EmbeddedCover 描述视频内嵌封面（attached_pic）流。
+type EmbeddedCover struct {
+	// Index 封面流在文件中的索引（供 -map 使用）。
+	Index int
+	// Codec 图片编码名：mjpeg / png / webp 等。
+	Codec string
+}
+
+// EmbeddedCoverInfo 探测视频是否内嵌封面（attached_pic 流）。
+// 用 ffprobe 读取流 disposition，不解码视频帧，速度足够快。
+func (c *Client) EmbeddedCoverInfo(ctx context.Context, path string) (EmbeddedCover, bool, error) {
+	info, err := c.Probe(ctx, path)
+	if err != nil {
+		return EmbeddedCover{}, false, err
+	}
+	for _, s := range info.Streams {
+		if s.IsAttachedPic {
+			return EmbeddedCover{Index: s.Index, Codec: s.CodecName}, true, nil
+		}
+	}
+	return EmbeddedCover{}, false, nil
+}
+
+// ExtractEmbeddedCover 将内嵌封面流完整抽出为图片字节（stream copy，不重编码）。
+// attached_pic 流本身就是一张完整图片（mjpeg/png/webp），copy 即可无损还原。
+func (c *Client) ExtractEmbeddedCover(ctx context.Context, path string, idx int, codec string) ([]byte, error) {
+	tmp, err := os.CreateTemp("", "fvct-cover-*"+extForImageCodec(codec))
+	if err != nil {
+		return nil, err
+	}
+	tmpName := tmp.Name()
+	_ = tmp.Close()
+	defer os.Remove(tmpName)
+
+	args := []string{
+		"-v", "error",
+		"-y",
+		"-i", path,
+		"-map", "0:" + strconv.Itoa(idx),
+		"-c", "copy",
+		tmpName,
+	}
+	cmd := exec.CommandContext(ctx, c.ffmpegBin, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return nil, fmt.Errorf("提取内嵌封面 %s 失败: %s", path, msg)
+	}
+	return os.ReadFile(tmpName)
+}
+
+// extForImageCodec 由图片编码推导输出文件扩展名。
+func extForImageCodec(codec string) string {
+	switch strings.ToLower(codec) {
+	case "png":
+		return ".png"
+	case "webp":
+		return ".webp"
+	default:
+		return ".jpg"
+	}
 }
 
 // ==================== 校验输入 ====================

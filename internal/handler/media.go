@@ -71,9 +71,19 @@ func (h *mediaHandler) info(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// 是否有封面：自定义封面文件，或视频内嵌封面（attached_pic）
+	hasCover := h.svc.Covers.CoverPath(p) != ""
+	if !hasCover {
+		for _, s := range info.Streams {
+			if s.IsAttachedPic {
+				hasCover = true
+				break
+			}
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"info":     info,
-		"hasCover": h.svc.Covers.CoverPath(p) != "",
+		"hasCover": hasCover,
 		"stream":   service.ResolveStreamURL(p),
 	})
 }
@@ -126,21 +136,31 @@ func (h *mediaHandler) stream(c *gin.Context) {
 	http.ServeContent(c.Writer, c.Request, filepath.Base(p), st.ModTime(), f)
 }
 
-// mimeTypeForExt 简易 MIME 映射（浏览器播放用）。
+// mimeTypeForExt 简易 MIME 映射（浏览器播放与下载用）。
 func mimeTypeForExt(ext string) string {
 	switch strings.ToLower(ext) {
-	case ".mp4", ".m4v":
+	case ".mp4", ".m4v", ".mp4v", ".f4v":
 		return "video/mp4"
 	case ".webm":
 		return "video/webm"
 	case ".mov":
 		return "video/quicktime"
-	case ".ts":
+	case ".ts", ".m2ts", ".mts":
 		return "video/mp2t"
+	case ".mkv":
+		return "video/x-matroska"
 	case ".avi":
 		return "video/x-msvideo"
-	case ".mkv", ".flv", ".wmv", ".rmvb", ".rm", ".mpg", ".mpeg", ".m2ts", ".3gp":
-		return "application/octet-stream"
+	case ".flv":
+		return "video/x-flv"
+	case ".wmv":
+		return "video/x-ms-wmv"
+	case ".mpg", ".mpeg":
+		return "video/mpeg"
+	case ".3gp":
+		return "video/3gpp"
+	case ".rm", ".rmvb":
+		return "video/vnd.rn-realvideo"
 	default:
 		return ""
 	}

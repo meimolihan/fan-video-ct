@@ -45,6 +45,72 @@ func (c *CoverService) CoverPath(videoPath string) string {
 	return ""
 }
 
+// CoverData 返回封面图片字节与 Content-Type。优先返回自定义封面文件；若视频
+// 内嵌封面（attached_pic，如批处理脚本写入的 Cover (Front)）则提取之；两者
+// 都没有时返回 error。
+func (c *CoverService) CoverData(ctx context.Context, videoPath string) ([]byte, string, error) {
+	if coverPath := c.CoverPath(videoPath); coverPath != "" {
+		data, err := os.ReadFile(coverPath)
+		if err != nil {
+			return nil, "", fmt.Errorf("读取封面失败: %w", err)
+		}
+		return data, contentTypeFromCoverPath(coverPath), nil
+	}
+	pic, ok, err := c.ffc.EmbeddedCoverInfo(ctx, videoPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("检测内嵌封面失败: %w", err)
+	}
+	if !ok {
+		return nil, "", fmt.Errorf("该视频暂无封面")
+	}
+	data, err := c.ffc.ExtractEmbeddedCover(ctx, videoPath, pic.Index, pic.Codec)
+	if err != nil {
+		return nil, "", err
+	}
+	return data, mimeTypeFromCodec(pic.Codec), nil
+}
+
+// HasCover 是否存在封面：自定义封面文件或视频内嵌 attached_pic 流。
+func (c *CoverService) HasCover(ctx context.Context, videoPath string) bool {
+	if c.CoverPath(videoPath) != "" {
+		return true
+	}
+	_, ok, err := c.ffc.EmbeddedCoverInfo(ctx, videoPath)
+	if err != nil {
+		c.log.Warnf("检测内嵌封面失败 %s: %v", videoPath, err)
+		return false
+	}
+	return ok
+}
+
+// mimeTypeFromCodec 由图片编码名推导 MIME 类型。
+func mimeTypeFromCodec(codec string) string {
+	switch strings.ToLower(codec) {
+	case "png":
+		return "image/png"
+	case "webp":
+		return "image/webp"
+	case "gif":
+		return "image/gif"
+	default:
+		return "image/jpeg"
+	}
+}
+
+// contentTypeFromCoverPath 根据封面文件扩展名返回 Content-Type。
+func contentTypeFromCoverPath(p string) string {
+	switch strings.ToLower(filepath.Ext(p)) {
+	case ".png":
+		return "image/png"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	default:
+		return "image/jpeg"
+	}
+}
+
 // PreviewFrame 预览指定时间的视频帧，返回图片字节与 Content-Type。
 func (c *CoverService) PreviewFrame(ctx context.Context, videoPath string, at float64) ([]byte, string, error) {
 	return c.ffc.CaptureFrameBytes(ctx, videoPath, at)

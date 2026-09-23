@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -77,23 +76,25 @@ func (h *coverHandler) preview(c *gin.Context) {
 }
 
 // get GET /api/cover?path= 返回当前封面图片（不存在时 404）。
+// 优先返回自定义封面；视频自带内嵌封面（attached_pic）时返回该封面。
 func (h *coverHandler) get(c *gin.Context) {
 	p, ok := h.pathFromQuery(c)
 	if !ok {
 		return
 	}
-	coverPath := h.svc.Covers.CoverPath(p)
-	if coverPath == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "该视频暂无封面", "hasCover": false})
-		return
-	}
-	// 读取图片字节并直接返回（封面通常很小）
-	data, err := os.ReadFile(coverPath)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+	data, contentType, err := h.svc.Covers.CoverData(ctx, p)
 	if err != nil {
+		if h.svc.Covers.CoverPath(p) == "" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "该视频暂无封面", "hasCover": false})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取封面失败: " + err.Error()})
 		return
 	}
-	c.Data(http.StatusOK, contentTypeForExt(coverPath), data)
+	c.Header("Cache-Control", "public, max-age=3600")
+	c.Data(http.StatusOK, contentType, data)
 }
 
 // capture POST /api/cover?path=&t= 截取指定时间帧，保存并替换封面。
@@ -153,16 +154,4 @@ func (h *coverHandler) delete(c *gin.Context) {
 	}
 	h.log.Infof("已移除封面: %s", p)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "hasCover": false})
-}
-
-// contentTypeForExt 根据封面文件扩展名返回 Content-Type。
-func contentTypeForExt(p string) string {
-	switch strings.ToLower(filepath.Ext(p)) {
-	case ".png":
-		return "image/png"
-	case ".webp":
-		return "image/webp"
-	default:
-		return "image/jpeg"
-	}
 }

@@ -86,6 +86,11 @@ func (c *Client) buildCutArgs(input, output string, start, duration float64, mod
 
 // RunCut 执行剪切任务，并实时回调 0~1 的进度值。
 // 当 ctx 被取消（任务取消按时）会终止 ffmpeg 进程并清理未完成输出文件。
+//
+// 转码剪切（ModeReencode）单次完成且终点精确；直接剪切（ModeCopy）因
+// stream copy 无法按帧截断，单趟命令会在终点锚点之后多出一整个关键帧组
+// （GOP），因此改为两趟：第一趟先用输入快速 seek 截出候选片段，第二趟
+// 对候选片段再按 -t 输出时长收紧结尾，把终点误差压到约 1~2 帧。
 func (c *Client) RunCut(ctx context.Context, input, output string, start, duration float64, mode CutMode, progress func(float64)) error {
 	cleanup := func() {
 		_ = os.Remove(output)
@@ -94,7 +99,48 @@ func (c *Client) RunCut(ctx context.Context, input, output string, start, durati
 		}
 	}
 
-	cmd := exec.CommandContext(ctx, c.ffmpegBin, c.buildCutArgs(input, output, start, duration, mode)...)
+	if mode != ModeCopy {
+		if err := c.runCutPass(ctx, c.buildCutArgs(input, output, start, duration, mode), duration, progress); err != nil {
+			cleanup()
+			return err
+		}
+		return nil
+	}
+
+	// copy 两趟剪切：临时文件与最终输出同目录同容器，避免跨文件系统。
+	temp := output + ".part" + strings.ToLower(filepath.Ext(output))
+	// 进度映射：第一趟 [0,0.5]，第二趟 [0.5,1]。
+	pass1 := func(p float64) {
+		if progress != nil {
+			progress(p * 0.5)
+		}
+	}
+	pass2 := func(p float64) {
+		if progress != nil {
+			progress(0.5 + p*0.5)
+		}
+	}
+
+	if err := c.runCutPass(ctx, c.buildCutArgs(input, temp, start, duration, mode), duration, pass1); err != nil {
+		_ = os.Remove(temp)
+		cleanup()
+		return err
+	}
+	if err := c.runCutPass(ctx, c.buildCutArgs(temp, output, 0, duration, mode), duration, pass2); err != nil {
+		_ = os.Remove(temp)
+		cleanup()
+		return err
+	}
+	_ = os.Remove(temp)
+	if progress != nil {
+		progress(1)
+	}
+	return nil
+}
+
+// runCutPass 执行一次 ffmpeg 剪切命令，并实时回调 0~1 的进度值。
+func (c *Client) runCutPass(ctx context.Context, args []string, duration float64, progress func(float64)) error {
+	cmd := exec.CommandContext(ctx, c.ffmpegBin, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -107,9 +153,7 @@ func (c *Client) RunCut(ctx context.Context, input, output string, start, durati
 		return fmt.Errorf("启动 ffmpeg 失败: %w", err)
 	}
 
-	canceled := make(chan struct{}, 1)
 	go func() {
-		defer close(canceled)
 		if duration <= 0 {
 			return
 		}
@@ -143,14 +187,10 @@ func (c *Client) RunCut(ctx context.Context, input, output string, start, durati
 	}()
 
 	runErr := cmd.Wait()
-
 	if ctx.Err() != nil {
-		// 任务被取消
-		cleanup()
 		return context.Canceled
 	}
 	if runErr != nil {
-		cleanup()
 		return fmt.Errorf("ffmpeg 执行失败: %v（%s）", runErr, errBuf.String())
 	}
 	if progress != nil {

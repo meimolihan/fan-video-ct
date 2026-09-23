@@ -98,9 +98,29 @@ func (h *cutTaskHandler) download(c *gin.Context) {
 	if name == "" {
 		name = filepath.Base(t.Output)
 	}
-	// RFC 5987 编码中文文件名
+	// 正确的视频 MIME：以 application/octet-stream 提供会让 Chrome 视为
+	// “可疑二进制”并在 HTTP（非 HTTPS）页面上拦截下载。视频类型则放行。
+	if ct := mimeTypeForExt(filepath.Ext(t.Output)); ct != "" {
+		c.Header("Content-Type", ct)
+	} else {
+		c.Header("Content-Type", "application/octet-stream")
+	}
+	// RFC 5987 编码中文文件名；纯 ASCII 名同时附带 filename= 兜底
 	encoded := "filename*=UTF-8''" + url.PathEscape(name)
-	c.Header("Content-Disposition", "attachment; "+encoded)
-	c.Header("Content-Type", "application/octet-stream")
+	cd := "attachment; " + encoded
+	if isASCII(name) {
+		cd = `attachment; filename="` + name + `"; ` + encoded
+	}
+	c.Header("Content-Disposition", cd)
 	http.ServeFile(c.Writer, c.Request, t.Output)
+}
+
+// isASCII 判断字符串是否全部为 ASCII 字符。
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
 }
