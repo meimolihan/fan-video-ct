@@ -2,8 +2,12 @@
 package handler
 
 import (
+	"io"
+	"io/fs"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -22,9 +26,9 @@ type Handler struct {
 	log     *zap.SugaredLogger
 	webRoot http.FileSystem
 
-	media *mediaHandler
-	cut   *cutTaskHandler
-	cover *coverHandler
+	media  *mediaHandler
+	cut    *cutTaskHandler
+	cover  *coverHandler
 	preset *presetHandler
 }
 
@@ -92,7 +96,8 @@ func (h *Handler) Router() *gin.Engine {
 // serveStatic 提供前端静态资源：/ 与 asset 路径从 webRoot（磁盘或内嵌）读取，
 // 未匹配到文件的路径回退到 index.html（服务端渲染单页应用友好）。
 func (h *Handler) serveStatic(r *gin.Engine) {
-	routes := []string{"/favicon.svg", "/css/", "/js/", "/assets/"}
+	r.GET("/favicon.svg", h.favicon)
+	routes := []string{"/css/", "/js/", "/assets/"}
 	r.NoRoute(func(c *gin.Context) {
 		p := c.Request.URL.Path
 		clean := path.Clean("/" + p)
@@ -110,6 +115,37 @@ func (h *Handler) serveStatic(r *gin.Engine) {
 	})
 }
 
+// favicon 提供站点图标（替换免重编译、免清缓存生效）。
+// 解析优先级：app.favicon 配置 > <数据目录>/favicon.svg > web_dir/内嵌默认图标。
+func (h *Handler) favicon(c *gin.Context) {
+	const cacheControl = "no-cache"
+
+	if p := h.cfg.FaviconPath(); p != "" {
+		if h.serveDiskFile(c, p, cacheControl) {
+			return
+		}
+	}
+	if p := filepath.Join(h.cfg.App.DataDir, "favicon.svg"); h.serveDiskFile(c, p, cacheControl) {
+		return
+	}
+	h.serveFile(c, "favicon.svg", cacheControl)
+}
+
+// serveDiskFile 从磁盘提供单个文件；文件缺失返回 false。
+func (h *Handler) serveDiskFile(c *gin.Context, p, cacheControl string) bool {
+	f, err := os.Open(p)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil || info.IsDir() {
+		return false
+	}
+	h.serveFileInfo(c, f, info, cacheControl)
+	return true
+}
+
 // serveFile 从 webRoot 提供单个文件（支持缓存头）。
 func (h *Handler) serveFile(c *gin.Context, name, cacheControl string) {
 	f, err := h.webRoot.Open(path.Clean("/" + name))
@@ -123,6 +159,11 @@ func (h *Handler) serveFile(c *gin.Context, name, cacheControl string) {
 		c.Status(http.StatusNotFound)
 		return
 	}
+	h.serveFileInfo(c, f, info, cacheControl)
+}
+
+// serveFileInfo 写缓存头并输出文件内容（Content-Type 依据真实文件名扩展名推导）。
+func (h *Handler) serveFileInfo(c *gin.Context, f io.ReadSeeker, info fs.FileInfo, cacheControl string) {
 	if cacheControl != "" {
 		c.Header("Cache-Control", cacheControl)
 	}

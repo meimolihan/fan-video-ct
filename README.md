@@ -135,9 +135,33 @@ docker run -d --name fan-video-ct -p 8788:8788 \
 | `app.data_dir` | `FCT_APP_DATA_DIR` | `./data` | 数据目录 |
 | `app.media_dir` | `FCT_APP_MEDIA_DIR` | 空 | 文件浏览器根目录 |
 | `app.output_dir` | `FCT_APP_OUTPUT_DIR` | `output`（相对数据目录） | 剪切输出目录 |
+| `app.favicon` | `FCT_APP_FAVICON` | 空 | 自定义 favicon 路径（相对数据目录） |
 | `app.worker` | `FCT_APP_WORKER` | `1` | 剪切任务并发数 |
 | `ffmpeg.preset` | `FCT_FFMPEG_PRESET` | `veryfast` | 重编码预设 |
 | `ffmpeg.crf` | `FCT_FFMPEG_CRF` | `18` | 重编码质量 |
+
+## 更换网站图标（favicon）
+
+替换站点图标**无需重新编译**，将新图标放入数据目录并命名 `favicon.svg` 即可（数据目录即安装时 `-d` 指定的目录，默认为 `/var/lib/fan-video-ct/data`）：
+
+```bash
+cp /path/to/your-icon.svg /var/lib/fan-video-ct/data/favicon.svg
+systemctl restart fan-video-ct
+```
+
+- **默认格式**：SVG（推荐，页面布局已按 26×26 正方形预留）。PNG / ICO 等其他格式同样支持，效果与 `URL=/favicon.svg` 保持一致，Content-Type 按下述真实文件扩展名自动识别
+- **自定义文件名 / 任意目录**：配置 `app.favicon`（相对路径基于数据目录）或环境变量 `FCT_APP_FAVICON`，例如 `app.favicon: icon.png`
+- **解析优先级**：`app.favicon` 配置 > `<数据目录>/favicon.svg` > web_dir（如果配置了 `app.web_dir`）> 二进制内嵌默认图标
+- favicon 缓存策略为 `no-cache`，替换后刷新页面即可生效；个别 CDN 层仍可能残留旧图，强刷 `Ctrl+Shift+R` 验证
+
+**编译进二进制 / Docker 镜像**（适合改默认图标、无需看运行机器）：
+
+1. 用你的图标（**SVG 格式**，保留文件名 `favicon.svg`）覆盖 `internal/embedded/web/favicon.svg`
+2. 重新构建并部署：
+   - 二进制：`make build`（产物 `bin/fan-video-ct`）或 `bash scripts/build-release.sh`（`dist/` 发布包）
+   - Docker 镜像：`docker build --build-arg FCT_VERSION=<版本> -t mobufan/fan-video-ct:<版本> .`（Dockerfile 的 `COPY . .` 会把该文件随 `go:embed` 打进镜像）
+
+编译进二进制的图标是**最终兜底**：运行时若 `<数据目录>/favicon.svg` 或 `app.favicon` 存在，仍优先用磁盘图标（优先级：`app.favicon` > `<数据目录>/favicon.svg` > 编译进二进制的默认图标）。
 
 ## 片头片尾预设
 

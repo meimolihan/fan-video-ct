@@ -727,6 +727,13 @@
   /* ---------- 启动 ---------- */
   const init = () => {
     applyTheme();
+    setTimeout(() => {
+      const s = $('#splash');
+      if (s) {
+        s.classList.add('hide');
+        setTimeout(() => s.classList.add('remove'), 350);
+      }
+    }, 350);
     loadVersion();
     loadDir('');
     refreshTasks();

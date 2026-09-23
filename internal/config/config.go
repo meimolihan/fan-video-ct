@@ -23,6 +23,9 @@ type AppConfig struct {
 	DataDir string `mapstructure:"data_dir"`
 	// 前端静态文件目录（可选），留空时使用二进制内嵌资源
 	WebDir string `mapstructure:"web_dir"`
+	// 自定义 favicon 图标文件路径（可选，默认空）；相对路径基于数据目录解析。
+	// 留空时依次回退：<数据目录>/favicon.svg（免配置替换）→ 内嵌默认图标。
+	Favicon string `mapstructure:"favicon"`
 	// 文件浏览器默认根目录（可选），留空时从 / 开始浏览
 	MediaDir string `mapstructure:"media_dir"`
 	// 剪切输出目录，默认 <data_dir>/output
@@ -112,6 +115,7 @@ func setDefaults() {
 	viper.SetDefault("app.env", "production")
 	viper.SetDefault("app.data_dir", "./data")
 	viper.SetDefault("app.web_dir", "")
+	viper.SetDefault("app.favicon", "")
 	viper.SetDefault("app.media_dir", "")
 	viper.SetDefault("app.output_dir", "output")
 	viper.SetDefault("app.worker", 1)
@@ -146,6 +150,18 @@ func (c *Config) OutputDir() string {
 // CoversDir 返回封面存储目录
 func (c *Config) CoversDir() string {
 	return filepath.Join(c.App.DataDir, "covers")
+}
+
+// FaviconPath 返回自定义 favicon 文件路径。未配置返回空串；
+// 相对路径基于数据目录解析（与 OutputDir 同规则，-data 覆盖后自动跟随）。
+func (c *Config) FaviconPath() string {
+	if c.App.Favicon == "" {
+		return ""
+	}
+	if filepath.IsAbs(c.App.Favicon) {
+		return c.App.Favicon
+	}
+	return filepath.Join(c.App.DataDir, c.App.Favicon)
 }
 
 // FFmpegBin 返回 FFmpeg 可执行文件
