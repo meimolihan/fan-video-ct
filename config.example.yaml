@@ -1,0 +1,49 @@
+# fan-video-ct 配置示例
+#
+# 加载优先级（低 -> 高）：
+#   1. 内置默认值
+#   2. config.yaml（当前目录 / ./data / /etc/fan-video-ct）
+#   3. 环境变量（FCT_ 前缀，如 FCT_APP_PORT=8788）
+#
+# 完整示例见下；未配置项使用默认值。
+
+app:
+  # 监听端口
+  port: 8788
+  # 调试模式（输出更详细日志 / gin debug 模式）
+  debug: false
+  # 运行环境: development / production / testing
+  env: production
+  # 数据目录（封面、剪切输出、日志、片头片尾预设 presets.json）; 相对路径基于当前工作目录
+  data_dir: ./data
+  # 前端静态文件目录（可选）；留空使用二进制内嵌网页
+  web_dir: ""
+  # 文件浏览器默认根目录（可选）；留空从 / 开始浏览
+  media_dir: ""
+  # 剪切输出目录；相对路径基于 data_dir
+  output_dir: output
+  # 剪切任务并发数（避免同时启动多个重编码抢占 CPU）
+  worker: 1
+
+ffmpeg:
+  # FFmpeg / FFprobe 可执行文件路径（留空则在 PATH 中查找）
+  path: ffmpeg
+  ffprobe_path: ffprobe
+  # 重编码线程数（<=0 使用 ffmpeg 自动探测）
+  threads: 0
+  # 重编码预设（速度优先: veryfast / fast / medium）
+  preset: veryfast
+  # 重编码恒定质量 CRF（值越小画质越高）
+  crf: 18
+  # 重编码音频码率
+  audio_bitrate: 192k
+
+logging:
+  # 日志级别: debug / info / warn / error
+  level: info
+  # 输出格式: console / json
+  format: console
+  # 日志文件路径（留空输出到 stdout）
+  output_path: ""
+  # 输出到 stderr（与 output_path 互斥）
+  to_stderr: false

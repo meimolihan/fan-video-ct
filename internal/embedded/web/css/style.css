@@ -1,0 +1,1273 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-2: #263449;
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --warn: #d97706;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ===== 顶栏 ===== */
+.topbar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
+.badge {
+  font-size: 12px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, .25);
+  border: 1px solid rgba(37, 99, 235, .5);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ===== 布局 ===== */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  gap: 12px;
+  padding: 12px;
+  height: calc(100% - 52px);
+}
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 230px 1fr; }
+  .taskpanel { grid-column: 1 / -1; grid-row: auto; max-height: 260px; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+/* ===== 按钮 / 输入 ===== */
+.btn {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background .15s;
+}
+.btn:hover { background: #334155; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-danger { border-color: rgba(220, 38, 38, .5); color: #fca5a5; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.input {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 100%;
+}
+.input:focus { outline: 1px solid var(--primary); }
+
+/* ===== 文件列表 ===== */
+.file-list { flex: 1; overflow: auto; padding: 6px; }
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.file-item:hover { background: var(--panel-2); }
+.file-item.active { background: rgba(37, 99, 235, .2); }
+.file-item .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.file-item .fsize { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.file-item.dir { color: #93c5fd; }
+.file-item.video::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 4px;
+  background: var(--ok); flex-shrink: 0;
+}
+.file-item.dir::before {
+  content: "📁";
+  flex-shrink: 0;
+}
+.file-up { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+
+/* ===== 工作区 ===== */
+.workpanel { align-items: stretch; }
+.video-wrap {
+  background: #000;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.video-wrap video { width: 100%; height: 100%; display: block; }
+.video-empty { color: var(--muted); text-align: center; padding: 20px; }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.mode-group { display: flex; gap: 14px; }
+.radio { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+.output-group { flex: 1; min-width: 160px; max-width: 300px; }
+
+/* 片段总结 */
+.segments { padding: 0 14px 4px; }
+.stat-msg { font-size: 12px; color: var(--muted); }
+.stat-msg b { color: var(--text); }
+.keyframe-note { color: #f59e0b; margin-top: 2px; }
+
+/* ===== 时间轴 ===== */
+.timeline-wrap { padding: 10px 14px 12px; }
+.timeline {
+  position: relative;
+  height: 46px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+.timeline-progress {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: 0;
+  background: rgba(37, 99, 235, .18);
+  pointer-events: none;
+}
+.timeline-hit {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: #ef4444;
+  pointer-events: none;
+  display: none;
+}
+.thumb {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  bottom: 0;
+  background: var(--primary);
+  pointer-events: none;
+}
+.thumb::after {
+  content: "";
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--primary);
+}
+.thumb-start { left: 0; }
+.thumb-end { right: 0; }
+.timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ===== 播放控制条 ===== */
+.player-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 55%, rgba(0,0,0,.86) 100%);
+  opacity: 0;
+  transition: opacity .25s ease;
+  pointer-events: none;
+}
+.video-wrap:hover .player-bar,
+.video-wrap:focus-within .player-bar,
+.player-bar.paused { opacity: 1; pointer-events: auto; }
+.pbtn {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.pbtn:hover { background: rgba(255,255,255,.28); transform: scale(1.05); }
+.pbtn:active { transform: scale(.96); }
+.pbar {
+  position: relative;
+  flex: 1;
+  height: 26px;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+.pbar-track {
+  position: absolute;
+  left: 0; right: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.24);
+  pointer-events: none;
+}
+.pbar-fill {
+  position: absolute;
+  left: 0;
+  width: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--primary, #2563eb);
+  pointer-events: none;
+}
+.pbar-seg {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: 0;
+  background: rgba(37, 99, 235, .30);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.pbar-hit {
+  position: absolute;
+  width: 2px;
+  height: 14px;
+  left: 0%;
+  background: #fff;
+  border-radius: 1px;
+  pointer-events: none;
+  margin-left: -1px;
+}
+.phandle {
+  position: absolute;
+  top: 50%;
+  width: 12px; height: 18px;
+  margin-top: -9px;
+  transform: none;
+  background: var(--primary, #2563eb);
+  border-radius: 3px;
+  cursor: ew-resize;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.6);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+.phandle:hover { box-shadow: 0 0 0 2px #fff, 0 0 6px rgba(0,0,0,.5); }
+.phandle-start { left: 0; }
+.phandle-end { right: 0; }
+.phandle-start::after, .phandle-end::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+.phandle-start::before, .phandle-end::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+.phandle-start::after { border-bottom: 5px solid currentColor; color: inherit; top: -1px; }
+.phandle-start::before { border-top: 5px solid currentColor; color: inherit; bottom: -1px; }
+.phandle-end::after { border-bottom: 5px solid currentColor; color: inherit; top: -1px; }
+.phandle-end::before { border-top: 5px solid currentColor; color: inherit; bottom: -1px; }
+.ptime {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,.9);
+  min-width: 96px;
+  text-align: right;
+}
+
+/* ===== 封面 ===== */
+.coverbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+.coverbar img {
+  width: 160px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #000;
+}
+.cover-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cover-none { opacity: .35; }
+
+/* ===== 任务列表 ===== */
+.task-list { flex: 1; overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 6px; }
+.task-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--panel-2);
+}
+.task-item .t-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.task-item .t-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.task-item .t-status { font-size: 11px; padding: 1px 8px; border-radius: 999px; flex-shrink: 0; }
+.t-status.queued { background: rgba(217, 119, 6, .2); color: #fcd34d; }
+.t-status.running { background: rgba(37, 99, 235, .25); color: #bfdbfe; }
+.t-status.done { background: rgba(22, 163, 74, .2); color: #86efac; }
+.t-status.failed { background: rgba(220, 38, 38, .2); color: #fca5a5; }
+.t-status.cancelled { background: rgba(148, 163, 184, .2); color: #cbd5e1; }
+.task-item .t-bar { height: 4px; margin-top: 8px; background: #334155; border-radius: 2px; overflow: hidden; }
+.task-item .t-bar i { display: block; height: 100%; width: 0; background: var(--primary); transition: width .5s; }
+.task-item .t-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.task-item .t-err { font-size: 11px; color: #fca5a5; margin-top: 6px; word-break: break-all; }
+
+/* ===== toast ===== */
+.toast {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: all .3s;
+  z-index: 100;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast.err { border-left-color: var(--danger); }
+.toast.ok { border-left-color: var(--ok); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ==========================================================================
+   以下为 UI 全面检查后追加的样式（完全保留上方原始样式，仅做补充/覆盖）。
+   问题 ① 硬编码颜色不随主题变化 -> 抽为主题变量，暗色为默认值（保持原观感）。
+   问题 ② 无暗色/亮色双主题 -> 新增亮色变量组，随系统 prefers-color-scheme 切换。
+   问题 ③ color-scheme 未声明 -> 原生控件(单选/文件选择/视频控制条/滚动条)跟随主题。
+   ========================================================================== */
+
+/* ---------- 主题基础：新增语义化变量（暗色默认值，与原观感一致） ---------- */
+:root {
+  color-scheme: dark;
+  accent-color: var(--primary);
+  -webkit-tap-highlight-color: transparent;
+
+  /* 状态/语义色（组件内不再写死十六进制，统一走变量） */
+  --hover-bg: #334155;        /* 悬停/按压底色 */
+  --active-bg: #3b4a66;       /* 触屏按压反馈 */
+  --dir-fg: #93c5fd;          /* 目录条目文字（原 #93c5fd） */
+  --bar-track: #334155;       /* 进度条轨道（原 #334155） */
+  --scroll-thumb: #334155;    /* 滚动条滑块（原 #334155） */
+  --error-fg: #fca5a5;        /* 错误说明文字（原 #fca5a5） */
+  --danger-fg: #fca5a5;       /* 危险按钮文字（原 #fca5a5） */
+  --badge-fg: #bfdbfe;
+  --badge-bg: rgba(37, 99, 235, .25);
+  --badge-border: rgba(37, 99, 235, .5);
+  --shadow-toast: 0 6px 20px rgba(0, 0, 0, .35);   /* 深色背景下弱化阴影 */
+  --shadow-panel: none;                            /* 深色背景面板不堆叠重阴影 */
+  --adjbar-bg: rgba(38, 52, 73, .35);              /* 微调栏底色 */
+
+  /* 任务状态标签色组 */
+  --st-queued-bg: rgba(217, 119, 6, .2);     --st-queued-fg: #fcd34d;
+  --st-running-bg: rgba(37, 99, 235, .25);   --st-running-fg: #bfdbfe;
+  --st-done-bg: rgba(22, 163, 74, .2);       --st-done-fg: #86efac;
+  --st-failed-bg: rgba(220, 38, 38, .2);     --st-failed-fg: #fca5a5;
+  --st-cancelled-bg: rgba(148, 163, 184, .2);--st-cancelled-fg: #cbd5e1;
+
+  /* 圆角/焦点环统一 */
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+}
+
+/* 首帧背景立即跟随主题，避免主题切换闪烁（html 画布色） */
+html { background: var(--bg); }
+
+/* ---------- 亮色主题变量组 ----------
+   两种来源（取其一即可，优先级相同）：
+   ① 手动指定：html[data-theme="light"]
+   ② 跟随系统：系统为亮色且未手动指定暗色时（自动模式回退）
+   手动选择优先于系统偏好；数据从根 :root 默认暗色继承。 */
+html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f1f5f9;
+    --panel: #ffffff;
+    --panel-2: #f8fafc;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --warn: #d97706;
+
+    --hover-bg: #f1f5f9;
+    --active-bg: #e2e8f0;
+    --dir-fg: #1d4ed8;
+    --bar-track: #e2e8f0;
+    --scroll-thumb: #cbd5e1;
+    --error-fg: #b91c1c;
+    --danger-fg: #b91c1c;
+    --badge-fg: #1d4ed8;
+    --badge-bg: rgba(37, 99, 235, .1);
+    --badge-border: rgba(37, 99, 235, .35);
+    --shadow-toast: 0 6px 20px rgba(15, 23, 42, .14);
+    --shadow-panel: 0 1px 3px rgba(15, 23, 42, .06);
+    --adjbar-bg: rgba(37, 99, 235, .06);
+
+    --st-queued-bg: rgba(217, 119, 6, .15);  --st-queued-fg: #92400e;
+    --st-running-bg: rgba(37, 99, 235, .12); --st-running-fg: #1d4ed8;
+    --st-done-bg: rgba(22, 163, 74, .14);    --st-done-fg: #15803d;
+    --st-failed-bg: rgba(220, 38, 38, .12);  --st-failed-fg: #b91c1c;
+    --st-cancelled-bg: rgba(100, 116, 139, .15); --st-cancelled-fg: #475569;
+}
+
+/* 自动模式（未手动选择）时跟随系统偏好的亮色回退 */
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f1f5f9;
+    --panel: #ffffff;
+    --panel-2: #f8fafc;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --warn: #d97706;
+
+    --hover-bg: #f1f5f9;
+    --active-bg: #e2e8f0;
+    --dir-fg: #1d4ed8;
+    --bar-track: #e2e8f0;
+    --scroll-thumb: #cbd5e1;
+    --error-fg: #b91c1c;
+    --danger-fg: #b91c1c;
+    --badge-fg: #1d4ed8;
+    --badge-bg: rgba(37, 99, 235, .1);
+    --badge-border: rgba(37, 99, 235, .35);
+    --shadow-toast: 0 6px 20px rgba(15, 23, 42, .14);
+    --shadow-panel: 0 1px 3px rgba(15, 23, 42, .06);
+    --adjbar-bg: rgba(37, 99, 235, .06);
+
+    --st-queued-bg: rgba(217, 119, 6, .15);  --st-queued-fg: #92400e;
+    --st-running-bg: rgba(37, 99, 235, .12); --st-running-fg: #1d4ed8;
+    --st-done-bg: rgba(22, 163, 74, .14);    --st-done-fg: #15803d;
+    --st-failed-bg: rgba(220, 38, 38, .12);  --st-failed-fg: #b91c1c;
+    --st-cancelled-bg: rgba(100, 116, 139, .15); --st-cancelled-fg: #475569;
+  }
+}
+
+/* ---------- 顶栏右侧（版本徽章 + 主题切换） ---------- */
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+#btn-theme { min-width: 34px; font-size: 15px; line-height: 1; }
+
+/* ---------- 面板/卡片/任务卡片：主题化阴影（深色弱化、亮色柔和投影） ---------- */
+.panel,
+.task-item {
+  box-shadow: var(--shadow-panel);
+}
+
+/* ---------- 交互动画统一 0.2s ~ 0.3s ease ---------- */
+.btn {
+  transition: background-color .2s ease, border-color .2s ease,
+              color .2s ease, transform .2s ease;
+}
+.btn:active { transform: scale(.97); }
+.file-item, .radio { transition: background-color .2s ease; }
+.input { transition: border-color .2s ease, box-shadow .2s ease; }
+.task-item .t-bar i { transition: width .3s ease; }
+.toast {
+  transition: opacity .25s ease, transform .25s ease;
+  box-shadow: var(--shadow-toast);
+}
+/* 注：.thumb / .timeline-progress / .timeline-hit 的 left/width 由 JS 拖动实时回调，
+   刻意不加过渡以保证跟手，否则拖动会产生粘滞——见「遗留风险」。 */
+
+/* ---------- 硬编码颜色改为主题变量（亮色下自动适配） ---------- */
+.badge { color: var(--badge-fg); background: var(--badge-bg); border-color: var(--badge-border); }
+.btn:hover { background: var(--hover-bg); }
+.file-item:hover { background: var(--hover-bg); }
+.file-item.dir { color: var(--dir-fg); }
+.task-item .t-bar { background: var(--bar-track); }
+.task-item .t-status { white-space: nowrap; }
+.t-status.queued { background: var(--st-queued-bg); color: var(--st-queued-fg); }
+.t-status.running { background: var(--st-running-bg); color: var(--st-running-fg); }
+.t-status.done { background: var(--st-done-bg); color: var(--st-done-fg); }
+.t-status.failed { background: var(--st-failed-bg); color: var(--st-failed-fg); }
+.t-status.cancelled { background: var(--st-cancelled-bg); color: var(--st-cancelled-fg); }
+.task-item .t-err { color: var(--error-fg); }
+.btn-danger { color: var(--danger-fg); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+
+/* ---------- 表单/输入框：占位提示、聚焦环、选区 ---------- */
+.input::placeholder { color: var(--muted); }
+.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); outline: none; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+::selection { background: rgba(37, 99, 235, .18); color: var(--text); }
+img { max-width: 100%; }
+
+/* ---------- 分组间一致性与细节修正 ---------- */
+.coverbar img { border-radius: var(--radius-md); background: var(--panel-2); }
+.timeline-wrap { padding: 10px 14px 16px; }       /* 手柄三角指示器防被裁剪 */
+.video-wrap video { object-fit: contain; }        /* 封面/画面按比例显示，不被拉伸 */
+
+/* ---------- 移动端响应式（≤768px：单列堆叠） ---------- */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  .topbar { padding: 0 12px; }
+  .brand span { white-space: nowrap; }
+
+  /* 三栏网格 -> 单列流式，页面纵向滚动 */
+  .layout {
+    display: block;
+    height: auto;
+    min-height: calc(100% - 52px);
+    padding: 10px;
+    gap: 10px;
+  }
+  .panel {
+    overflow: visible;
+    margin-bottom: 10px;
+  }
+  .filepanel, .taskpanel { overflow-y: auto; max-height: 42vh; }
+  .file-list, .task-list { min-height: 0; }
+
+  /* 视频区：避免整屏过高，画面等比 contain */
+  .video-wrap { max-height: 44vh; }
+
+  /* 工具栏纵向排列，主导按钮全宽 */
+  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .mode-group { flex-wrap: wrap; gap: 4px 14px; width: 100%; }
+  .output-group { min-width: 0; max-width: none; }
+  .toolbar .btn-primary { width: 100%; }
+
+  /* 封面区可换行，缩略图自适应 */
+  .coverbar { flex-wrap: wrap; gap: 10px; }
+  .coverbar img { width: 100%; max-width: 220px; }
+  .cover-actions { width: 100%; }
+
+  /* 时间信息允许换行避挤 */
+  .timeline-meta { flex-wrap: wrap; gap: 2px 8px; }
+
+  /* Toast 改为贴边通栏，不越屏 */
+  .toast { left: 12px; right: 12px; top: 60px; max-width: none; }
+}
+
+/* ---------- 触屏( coarse 指针 )：热区 >=44px，仅触屏生效，桌面不受影响 ---------- */
+@media (pointer: coarse) {
+  .btn, .btn-sm,
+  .panel-head .btn,
+  .radio,
+  .file-item, .file-up,
+  .cover-actions .btn,
+  .cover-actions label.btn {
+    min-height: 44px;
+  }
+  .btn-sm { padding-top: 10px; padding-bottom: 10px; }
+  .file-item, .file-up { padding-top: 10px; padding-bottom: 10px; }
+  .radio { align-items: center; }
+  .cover-actions label.btn { display: inline-flex; align-items: center; }
+  .cover-actions .btn,
+  .cover-actions label.btn { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ---------- 触屏无 hover：移除悬停残留，改用按压反馈 ---------- */
+@media (hover: none) {
+  .btn:hover { background: var(--panel-2); }
+  .btn-primary:hover { background: var(--primary); }
+  .file-item:hover { background: transparent; }
+  .radio:hover { background: transparent; }
+
+  .btn:active { background: var(--hover-bg); transform: scale(.97); }
+  .btn-primary:active { background: var(--primary-hover); }
+  .btn-danger:active { background: rgba(220, 38, 38, .15); }
+  .file-item:active { background: var(--active-bg); }
+  .radio:active { background: var(--active-bg); }
+}
+
+/* ---------- 减弱动效偏好：关闭过渡/动画，避免晕动 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+    新增：停止按钮 / 精确微调 / 片段徽章 / 快捷键提示 / 关键帧刻度 / 排版优化
+   ========================================================================== */
+
+/* ---------- 播放条：停止按钮（危险色悬停） ---------- */
+.pbtn-stop:hover { background: rgba(220, 38, 38, .6); }
+.pbtn-stop:active { background: rgba(220, 38, 38, .8); }
+
+/* 预览播放按钮（文字胶囊）：起点 / 末尾10s */
+.pbtn-label {
+  width: auto;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  gap: 4px;
+}
+@media (max-width: 768px) {
+  .pbtn-label { display: none; }
+}
+
+/* 未加载视频时完全隐藏播放条（覆盖 .video-wrap:hover 的显示规则） */
+.player-bar.hidden { display: none !important; }
+
+/* ---------- 精确微调栏 ---------- */
+.adjustbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--adjbar-bg);
+}
+.adj-item { display: inline-flex; align-items: center; gap: 6px; }
+.adj-label { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.adj-btn {
+  width: 28px; height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 7px;
+  font-size: 14px; line-height: 1;
+  cursor: pointer;
+  transition: background-color .2s ease, transform .2s ease;
+}
+.adj-btn:hover { background: var(--hover-bg); }
+.adj-btn:active { transform: scale(.93); }
+.btn-soft {
+  background: transparent;
+  color: var(--primary);
+  border-color: rgba(37, 99, 235, .45);
+}
+.btn-soft:hover { background: rgba(37, 99, 235, .12); }
+.input-select { width: auto; min-width: 78px; padding: 4px 8px; cursor: pointer; }
+
+/* ---------- 片段徽章 ---------- */
+.segments { padding: 10px 14px 6px; }
+.seg-badge {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--badge-fg);
+  background: var(--badge-bg);
+  border: 1px solid var(--badge-border);
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+.seg-dur {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--ok);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.keyframe-note b { color: #f59e0b; }
+
+/* ---------- 快捷键提示 ---------- */
+.hotkeys {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.hotkeys b {
+  color: var(--badge-fg);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--panel-2);
+}
+.hotkeys b + b { margin-left: -6px; }
+
+/* ---------- 关键帧刻度线（copy 模式）；置底不遮挡选择/播放指示 ---------- */
+#timeline { position: relative; }
+.timeline-ticks {
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.timeline-ticks i {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(148, 163, 184, .4);
+}
+.timeline-progress, .timeline-hit, .thumb { z-index: 2; }
+
+/* ---------- 任务：完成显示输出大小 ---------- */
+.task-item .t-size { font-size: 11px; color: var(--ok); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* —— 问题13：预览框内提示文字未完全居中。
+     原 .video-empty 是 .video-wrap 的 flex 子项，同级的 <video>（width/height:100%）
+     占据整块，flex 不换行把文字挤出水平中线。
+     改为绝对定位覆盖层：inset:0 铺满预览框，flex 水平+垂直双向居中；muted 文字色
+     跟随主题变量，桌面/移动与亮/暗双主题一致。 */
+.video-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* —— 问题13配套：提示文字淡入淡出，动画与全局 0.2~0.3s ease 统一 —— */
+@media (prefers-reduced-motion: no-preference) {
+  .video-empty { transition: opacity .25s ease; }
+}
+
+/* —— 问题14：文件/任务列表右侧滚动条“无法选中/拖动”。
+     根因：主题变量下滚动条拇指与面板底色相近（暗色 #334155 贴 #1e293b，
+     近乎隐形），轨道透明无落点反馈，鼠标难以锁定拇指拖拽。
+     修复：新增轨道/悬浮/按压主题色；WebKit 与 Firefox 双套样式统一；
+     拇指加内缩留白并带 hover 加亮、active 加深，可清晰抓取与点击轨道翻页。 */
+:root {
+  --scroll-track: rgba(148, 163, 184, .12);   /* 暗色：轨道微亮底，落点可见 */
+  --scroll-thumb-hover: #64748b;              /* 暗色：悬停加亮 */
+  --scroll-thumb-active: #7d8ca3;             /* 暗色：按压加深 */
+}
+html[data-theme="light"] {
+  --scroll-track: rgba(15, 23, 42, .06);      /* 亮色：轨道浅灰底 */
+  --scroll-thumb-hover: #94a3b8;
+  --scroll-thumb-active: #64748b;
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --scroll-track: rgba(15, 23, 42, .06);
+    --scroll-thumb-hover: #94a3b8;
+    --scroll-thumb-active: #64748b;
+  }
+}
+* { scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+.file-list, .task-list, .panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border: 2px solid var(--scroll-track);   /* 内缩留白，拇指不贴满轨道且更易抓取 */
+  border-radius: 5px;
+  transition: background-color .2s ease;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+::-webkit-scrollbar-thumb:active { background: var(--scroll-thumb-active); }
+
+/* —— 问题15：文件/任务列表右侧滚动条仍无法选中/拖动（根治双层滚动）——
+     ［根因A］ .filepanel/.taskpanel（overflow:auto）与内部 .file-list/.task-list
+        （overflow:auto）构成双层滚动容器：两条滚动条同落在右缘重叠，
+        鼠标实际抓到的是外层“无行程”的小拇指，拖动无反应 → 表现为无法选中。
+     ［根因B］ overflow:auto 在内容未溢出时不渲染拇指，列表不满一屏时无条可拖。
+     修复：
+     · 桌面端把滚动职责收敛到内层列表 —— 外层面板 overflow:hidden 消除双条重叠；
+     · 内层列表 overflow-y:scroll + scrollbar-gutter:stable → 轨道常驻、栏位预留，
+       不随内容多少消失，拇指始终可抓；
+     · overflow-x:hidden 隐藏横向条，避免与纵向条抢宽度/误触；
+     · 移动端改为仅面板滚动，内层 overflow:visible，不重复出条。 */
+@media (min-width: 769px) {
+  .filepanel, .taskpanel { overflow: hidden; }
+  .file-list, .task-list {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+  }
+}
+@media (max-width: 768px) {
+  .file-list, .task-list { overflow: visible; }
+}
+
+/* —— 问题16：暗色下滚动条依旧“看不见、抓不住”。
+     ［根因］拇指色 --scroll-thumb(#334155) 与面板(#1e293b/#263449)几乎同色，
+       轨道又近透明 → 整条近乎隐形；scrollbar-width:thin 再把拇指压细，
+       既找不到也无从拖动。
+     修复：高对比配色（拇指明显亮于面板、轨道肉眼可见），宽度 12px，
+       Firefox 回退 scrollbar-width:auto 保证满尺寸常驻轨道；
+       与上轮配合（内层单滚动 + scrollbar-gutter:stable）已无双层条问题。 */
+:root {
+  --scroll-track: rgba(148, 163, 184, .18);   /* 暗色：轨道肉眼可见的底 */
+  --scroll-thumb: #64748b;                    /* 暗色：明显亮于面板的拇指 */
+  --scroll-thumb-hover: #94a3b8;
+  --scroll-thumb-active: #b6c2d1;
+}
+html[data-theme="light"] {
+  --scroll-track: rgba(15, 23, 42, .08);
+  --scroll-thumb: #94a3b8;
+  --scroll-thumb-hover: #64748b;
+  --scroll-thumb-active: #475569;
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --scroll-track: rgba(15, 23, 42, .08);
+    --scroll-thumb: #94a3b8;
+    --scroll-thumb-hover: #64748b;
+    --scroll-thumb-active: #475569;
+  }
+}
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 6px;
+  border: 3px solid var(--scroll-track);   /* 内缩 3px：贴边余量，视觉更宽更易抓 */
+  transition: background-color .2s ease;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+::-webkit-scrollbar-thumb:active { background: var(--scroll-thumb-active); }
+::-webkit-scrollbar-corner { background: transparent; }
+.file-list, .task-list, .panel { scrollbar-width: auto;   /* Firefox 满尺寸常驻 */ }
+
+/* —— 问题17：自定义可拖拽滚动条（Windows 叠加层滚动条无法拖动的根治）——
+     桌面端(pointer:fine)下，文件/任务列表的原生叠加滚动条不可拖拽，
+     由 JS 在面板内追加 .cscroll 轨道/拇指（纯增量，不改现有结构）担任拖动条；
+     原生滚轮与触控保留。轨道贴面板右侧、避让面板头；拇指随主题变量换色，
+     拖动联动 scrollTop；隐藏原生条避免双重条。 */
+@media (pointer: fine) {
+  .filepanel, .taskpanel { position: relative; }
+  #file-list, #task-list { scrollbar-width: none; }
+  #file-list::-webkit-scrollbar, #task-list::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .cscroll {
+    position: absolute;
+    top: 44px;                 /* 避开 panel-head（约 42px 高） */
+    right: 2px;
+    bottom: 6px;
+    width: 10px;
+    border-radius: 5px;
+    z-index: 5;
+    pointer-events: none;      /* 轨道不拦点击，仅拇指可交互 */
+  }
+  .cscroll .cscroll-thumb {
+    position: absolute;
+    left: 0; right: 0;
+    height: 40px;
+    background: var(--scroll-thumb);
+    border-radius: 5px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background-color .2s ease;
+  }
+  .cscroll .cscroll-thumb:hover { background: var(--scroll-thumb-hover); }
+  .cscroll.dragging .cscroll-thumb, .cscroll .cscroll-thumb:active { background: var(--scroll-thumb-active); }
+  body.cscroll-dragging { user-select: none; }
+}
+
+/* ==========================================================================
+    片头片尾预设：按钮 + 弹窗 + 表单（纯追加，未改动既有样式；
+    亮色走 var() 变量自动适配，暗色为默认值；动画统一 0.2~0.3s ease）
+   ========================================================================== */
+
+/* ---------- 新增语义色：弹窗遮罩 / 高亮选中（暗色默认，亮色两处覆盖） ---------- */
+:root {
+  --scrim: rgba(15, 23, 42, .55);            /* 弹窗遮罩 */
+  --preset-active-bg: rgba(37, 99, 235, .14);
+  --preset-active-bd: rgba(37, 99, 235, .55);
+}
+html[data-theme="light"] {
+  --scrim: rgba(15, 23, 42, .28);
+  --preset-active-bg: rgba(37, 99, 235, .08);
+  --preset-active-bd: rgba(37, 99, 235, .5);
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --scrim: rgba(15, 23, 42, .28);
+    --preset-active-bg: rgba(37, 99, 235, .08);
+    --preset-active-bd: rgba(37, 99, 235, .5);
+  }
+}
+
+/* ---------- 「剪切片段」模块右侧：预设按钮（与摘要同行，右对齐） ---------- */
+#seg-box { display: inline-block; vertical-align: middle; }
+.presetbar { display: inline-block; vertical-align: middle; float: right; padding-right: 2px; }
+.presetbar .btn {
+  min-height: 30px;
+  background: var(--panel-2);
+  border-color: rgba(37, 99, 235, .45);
+  color: var(--primary);
+  font-weight: 600;
+}
+.presetbar .btn:hover { background: rgba(37, 99, 235, .12); border-color: var(--primary); }
+.timeline-wrap { clear: both; }               /* 防浮动按钮盖住时间轴区 */
+@keyframes presetPulse { 0% { transform: scale(.96); opacity: .7; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes presetFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes presetSlideIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* ---------- 弹窗容器 / 遮罩 ---------- */
+.preset-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--scrim);
+  animation: presetFadeIn .25s ease;
+}
+.preset-modal[hidden] { display: none; }
+.preset-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+  max-height: min(78vh, 640px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--shadow-toast);
+  animation: presetSlideIn .22s ease;
+  overflow: hidden;
+}
+.preset-dialog-sm { max-width: 360px; }
+
+/* 弹窗头部 */
+.preset-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.preset-title { font-size: 15px; font-weight: 600; }
+.btn-icon { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.preset-hint {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 10px 14px 4px;
+  line-height: 1.5;
+}
+
+/* 预设列表（可滚动，任意数量） */
+.preset-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 14px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.preset-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 8px; }
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--panel-2);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.preset-item:hover { border-color: var(--preset-active-bd); background: var(--preset-active-bg); }
+.preset-item.active {
+  border-color: var(--preset-active-bd);
+  background: var(--preset-active-bg);
+  box-shadow: 0 0 0 1px var(--preset-active-bd);
+}
+.preset-item-main { flex: 1 1 auto; min-width: 0; }
+.preset-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preset-item-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.preset-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.preset-item-actions .btn { transition: transform .2s ease, background-color .2s ease, border-color .2s ease; }
+.preset-item-actions .btn:active { transform: scale(.94); }
+
+/* 预设列表自定义滚动条（样式对齐全局） */
+.preset-list { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+
+/* 底部操作区 */
+.preset-foot { padding: 10px 14px 14px; border-top: 1px solid var(--border); }
+.btn-block { display: block; width: 100%; text-align: center; }
+
+/* ---------- 新增 / 编辑表单 ---------- */
+.preset-form {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.preset-field { display: flex; flex-direction: column; gap: 5px; }
+.preset-field-label { font-size: 12px; color: var(--muted); }
+.preset-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.preset-form-actions .btn { transition: transform .2s ease, background-color .2s ease; }
+.preset-form-actions .btn:active { transform: scale(.96); }
+
+/* 弹窗打开时锁定背景滚动 */
+body.preset-open { overflow: hidden; }
+
+/* ---------- 移动端：按钮换行、弹窗贴边、热区不缩 ---------- */
+@media (max-width: 768px) {
+  #seg-box, .presetbar { display: block; float: none; width: 100%; }
+  .presetbar { margin-top: 6px; }
+  .presetbar .btn { width: 100%; min-height: 42px; }
+  .preset-modal { padding: 10px; }
+  .preset-dialog, .preset-dialog-sm { max-width: 100%; }
+}
+/* 触屏粗指针：列表条目 / 操作按钮热区 ≥ 44px */
+@media (pointer: coarse) {
+  .preset-item { min-height: 48px; }
+  .preset-item-actions .btn { min-height: 40px; }
+  .preset-foot .btn-block { min-height: 44px; }
+  .preset-form-actions .btn { min-height: 44px; flex: 1 1 0; justify-content: center; }
+  .btn-icon { width: 44px; height: 44px; }
+}
+
+/* ==========================================================================
+    第二轮 UI 全面检查修复（桌面 + 移动 + 双主题）：
+    仅补充/覆盖 CSS，未改动任何 DOM、id/class 与 JS 业务逻辑。
+   ========================================================================== */
+
+/* —— 问题9配套：新增语义色变量；亮色经属性与“跟随系统”两处覆盖 —— */
+:root {
+  --note-fg: #f59e0b;                  /* 关键帧对齐提示（暗色琥珀，对比良好） */
+  --tick-fg: rgba(148, 163, 184, .4);  /* 时间轴关键帧刻度（暗色） */
+  --ok-text: #4ade80;                  /* 高亮文本绿（暗色，字体对比更佳） */
+}
+html[data-theme="light"] {
+  --note-fg: #b45309;                  /* 亮色：深琥珀，白底对比 ≈6:1 */
+  --tick-fg: rgba(15, 23, 42, .16);    /* 亮色：刻度改用深灰，避免过淡 */
+  --ok-text: #15803d;                  /* 亮色：深绿，白底对比 ≈5.7:1 */
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --note-fg: #b45309;
+    --tick-fg: rgba(15, 23, 42, .16);
+    --ok-text: #15803d;
+  }
+}
+
+/* —— 问题6：关键帧对齐提示改用主题变量（修亮色对比度不足 2.2:1） —— */
+.keyframe-note { color: var(--note-fg); }
+.keyframe-note b { color: var(--note-fg); }
+
+/* —— 问题7：片段时长 / 任务输出大小改用专用高亮绿（修亮色临界对比） —— */
+.seg-dur { color: var(--ok-text); }
+.task-item .t-size { color: var(--ok-text); }
+
+/* —— 问题8：时间轴关键帧刻度主题化（亮色不再过淡） —— */
+.timeline-ticks i { background: var(--tick-fg); }
+
+/* —— 问题2：工具栏左右内边距与其它区块统一为 14px（内容对齐一致） —— */
+.toolbar { padding: 10px 14px; }
+
+/* —— 问题3：网格列 / 面板最小宽度兜底，防长文本把三栏撑破 —— */
+.layout > *, .panel { min-width: 0; }
+
+/* —— 问题4：顶栏品牌区可收缩，窄屏超长标题省略号截断不溢出 —— */
+.topbar .brand { min-width: 0; }
+.topbar .brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46vw;
+}
+
+/* —— 问题1：桌面端视频区高度上限，避免超宽/矮视口 16:9 区域溢出屏外 —— */
+@media (min-width: 769px) {
+  .video-wrap { max-height: 60vh; }
+}
+
+/* —— 问题5：移动端微调栏子项弹性占行、间距收紧（三组整行铺排不参差） —— */
+@media (max-width: 768px) {
+  .adjustbar { gap: 8px 10px; }
+  .adj-item { flex: 1 1 auto; }
+}
+
+/* —— 问题10：微调按钮圆角与全局 8px 统一（原为 7px） —— */
+.adj-btn { border-radius: var(--radius-md, 8px); }
+
+/* —— 问题11：时间轴锚点三角原本 14px 悬在条外，被 overflow:hidden 裁切不显示；
+     改为全部内置于条内底部、向上反指的三角，保证任何主题下可见不越界 —— */
+.thumb::after {
+  bottom: 0;
+  top: auto;
+  border-width: 5px 4px 0;
+  border-style: solid;
+  border-color: var(--primary) transparent transparent;
+}
+
+/* —— 问题12：触屏最小热区 44px（播放条按钮 / 微调按钮 / 步长下拉） —— */
+@media (pointer: coarse) {
+  .pbtn { height: 44px; }
+  .pbtn:not(.pbtn-label) { width: 44px; }
+  .pbtn-label { width: auto; min-width: 44px; }
+  .adj-btn { width: 44px; height: 44px; }
+  .input-select { min-height: 44px; }
+}
+/* ==========================================================================
+    第三轮 UI 全面检查修复（桌面 + 移动 + 亮暗双主题）
+    约束遵守：不改 DOM 结构 / id-class / JS 逻辑；仅新增 CSS 覆盖。
+   ========================================================================== */
+
+/* —— 问题R1/T1：隐藏状态 Toast 仍拦截点击。
+     不显示时 pointer-events:none 放行下方交互，显示时恢复可点；
+     修复“顶右区域（清空/预设/主题）点不到”的主因。 —— */
+.toast { pointer-events: none; }
+.toast.show { pointer-events: auto; }
+
+/* —— 问题R2/T2：任务列表空态复用了 .video-empty（绝对定位全屏覆盖层），
+     在列表容器内重新定位为普通块级占位，避免遮住“清空”按钮与面板头。 —— */
+.task-list .video-empty,
+.file-list .video-empty {
+  position: static;
+  inset: auto;
+  display: block;
+  padding: 24px 12px;
+  text-align: center;
+}
+
+/* —— 问题R3：超窄屏播放条横向溢出。
+     ≤400px 收紧按钮间距、允许进度条收缩、时间文本压缩。 —— */
+@media (max-width: 400px) {
+  .player-bar { gap: 6px; padding: 6px 8px; }
+  .pbar { min-width: 40px; }
+  .ptime { min-width: 0; font-size: 10px; }
+}
+
+/* —— 问题R4：预设按钮 / 预设列表编辑删除按钮触屏热区不足 44px。
+     以粗指针媒体查询统一提至 ≥44px（高特异性覆盖移动端 42px/40px）。 —— */
+@media (pointer: coarse) {
+  .presetbar .btn { min-height: 44px; }
+  .preset-item-actions .btn { min-height: 44px; }
+}
+
+/* —— 问题T3：播放条补充基础轨道线（DOM 无 .pbar-track，用伪元素描底），
+     选区外与锚点未设置时始终有 4px 轨道可参考，两主题一致。 —— */
+.pbar::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .22);
+  pointer-events: none;
+}
+
+/* —— 问题U1：触屏(hover:none)移除新增组件的 hover 高亮残留，
+     改为按压反馈（:active），避免点击后颜色“粘住”。 —— */
+@media (hover: none) {
+  .preset-item:hover { border-color: var(--border); background: var(--panel-2); }
+  .presetbar .btn:hover { background: var(--panel-2); border-color: rgba(37, 99, 235, .45); }
+  .preset-item-actions .btn:hover { background: var(--panel-2); }
+  .btn-soft:hover { background: transparent; }
+  .adj-btn:hover { background: var(--panel-2); }
+  .pbtn:hover { background: rgba(255, 255, 255, .14); transform: none; }
+}

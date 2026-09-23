@@ -1,0 +1,30 @@
+# fan-video-ct 视频剪切工具 Docker Compose 部署
+services:
+  fan-video-ct:
+    image: mobufan/fan-video-ct:latest
+    container_name: fan-video-ct
+    restart: unless-stopped
+    ports:
+      - "8788:8788"
+    volumes:
+      # 数据目录：封面、剪切输出、日志、预设（剪切结果保存在宿主机此目录的 output/ 下）
+      - /var/lib/fan-video-ct/data:/data
+      # 可选：将宿主机原视频目录只读挂载进容器，便于在页面中直接浏览。
+      # 挂多个视频目录时，每条一个卷并给不同子路径，如 /media:/media。
+      - /vol2/1000/downloads/fan-video-ct:/media:ro
+      # 挂整盘浏览（权限较高，仅在信任的隔离环境使用）：
+      # - /:/host:ro
+    environment:
+      - TZ=Asia/Shanghai
+      # 文件浏览器默认根目录（指向上面挂载的视频目录；不设则从容器根浏览）
+      - FCT_APP_MEDIA_DIR=/media
+      # 剪切输出目录（相对数据目录或绝对路径）
+      # - FCT_APP_OUTPUT_DIR=output
+      # 剪切并发数
+      # - FCT_APP_WORKER=1
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8788/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
