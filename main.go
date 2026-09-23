@@ -6,15 +6,13 @@
 //
 // 命令：
 //
-//	status          查看运行状态与基础信息
-//	uninstall       停止服务并移除安装（systemd / 数据目录需二次确认清理）
-//	（无命令时启动 Web 服务）
-//
-// 选项：
-//
-//	-data <dir>     数据目录（默认 ./data，或读取配置 app.data_dir）
-//	-port <port>    监听端口（默认 8788，或读取配置 app.port）
-//	-version / -v   打印版本号并退出
+//	status          查看运行状态、访问地址、资源占用
+//	start|stop|restart  启动 / 停止 / 重启服务
+//	uninstall [-y] [--purge|--keep-data]  停止服务并移除安装
+//	version / -v    打印版本号
+//	help / -h       显示帮助
+//	backup|restore  备份 / 恢复说明
+//	（无命令时启动 Web 服务，可加 -port/-data/-media 选项）
 package main
 
 import (

@@ -112,14 +112,16 @@ docker run -d --name fan-video-ct -p 8788:8788 \
 
 | 命令 / 选项 | 说明 |
 | --- | --- |
-| （无命令） | 启动 Web 服务 |
-| `status` | 查看运行状态与基础信息 |
-| `uninstall` | 停止服务并移除 systemd 安装（数据目录需二次确认） |
+| （无命令） | 启动 Web 服务（可加 `-port` / `-data` / `-media`） |
+| `status` | 查看运行状态（banner + 安装信息、运行方式、PID、端口、访问地址、运行时长、内存、路径、健康检查） |
+| `start` / `stop` / `restart` | 启动 / 停止 / 重启服务（systemd 优先，其次直接管理进程） |
+| `uninstall` | 停止服务并移除 systemd 安装 |
+| `uninstall -y` / `--yes` | 免确认卸载（默认保留数据目录） |
+| `uninstall --purge` | 卸载同时删除数据目录 |
+| `uninstall --keep-data` | 卸载时保留数据目录 |
 | `backup` / `restore` | 备份/恢复提示（直接归档/还原数据目录，见下） |
-| `-data <dir>` | 数据目录（默认 `./data`） |
-| `-port <port>` | 监听端口（默认 `8788`） |
-| `-media <dir>` | 视频浏览根目录（默认全盘） |
-| `-version` / `-v` | 打印版本号 |
+| `version` / `-version` / `--version` / `-v` | 打印版本号 |
+| `help` / `-h` / `--help` | 显示帮助（banner + 命令表 + 访问地址） |
 
 备份数据目录（含封面、剪切输出、任务历史、片头片尾预设 `presets.json`）即完成整体备份；恢复则将归档解压回数据目录并重启服务。
 

@@ -18,8 +18,69 @@ func readConfigOrDir(fallback string) string {
 	return fallback
 }
 
+// uninstallOpts 解析并校验 uninstall 子命令选项。
+type uninstallOpts struct {
+	yes   bool // -y / --yes
+	purge bool // --purge / --delete-data
+	keep  bool // --keep-data
+}
+
+func parseUninstallArgs(args []string) (*uninstallOpts, bool, error) {
+	o := &uninstallOpts{}
+	for _, a := range args {
+		switch a {
+		case "-y", "--yes":
+			o.yes = true
+		case "--purge", "--delete-data":
+			o.purge = true
+		case "--keep-data":
+			o.keep = true
+		case "-h", "--help":
+			return o, true, nil
+		default:
+			return nil, false, fmt.Errorf("未知参数: %s（使用 -h 查看帮助）", a)
+		}
+	}
+	if o.purge && o.keep {
+		return nil, false, fmt.Errorf("--purge 与 --keep-data 不能同时使用")
+	}
+	return o, false, nil
+}
+
+func uninstallUsage() {
+	fmt.Println("用法: fan-video-ct uninstall [选项]")
+	fmt.Println()
+	fmt.Println("选项:")
+	for _, r := range [][2]string{
+		{"-y, --yes", "免确认，静默卸载（默认保留数据目录）"},
+		{"--purge", "卸载时同时删除数据目录"},
+		{"--keep-data", "卸载时保留数据目录"},
+		{"-h, --help", "显示帮助"},
+	} {
+		fmt.Printf("  %s %s\n", paint(r[0]+strings.Repeat(" ", 18-len(r[0])), clrWhite), paint(r[1], clrGrey))
+	}
+	fmt.Println()
+	fmt.Println("示例:")
+	fmt.Println("  sudo fan-video-ct uninstall -y            # 免确认卸载，保留数据目录")
+	fmt.Println("  sudo fan-video-ct uninstall -y --purge    # 免确认卸载，并删除数据目录")
+}
+
 // runUninstall 停止服务并移除安装（数据目录默认保留，询问后清除）。
-func runUninstall() error {
+func runUninstall(args []string) error {
+	o, showHelp, err := parseUninstallArgs(args)
+	if err != nil {
+		errPrint(err.Error())
+		uninstallUsage()
+		return err
+	}
+	if showHelp {
+		uninstallUsage()
+		return nil
+	}
+
+	banner("卸载")
+	sepPrint()
+
 	fmt.Println("正在卸载 fan-video-ct ...")
 
 	rec := readRecord()
@@ -55,25 +116,29 @@ func runUninstall() error {
 	_ = os.Remove(defaultRecordFile)
 	fmt.Printf("已移除记录文件: %s\n", defaultRecordFile)
 
-	// 4. 询问是否清除数据目录 / 安装目录
+	// 4. 数据目录
 	if dataDir != "" {
 		fmt.Printf("数据目录（含封面、剪切输出、配置）位于: %s\n", dataDir)
-		if confirm("是否同时清除数据目录？此操作不可恢复") {
+		remove := o.purge
+		if !remove && !o.keep && !o.yes {
+			remove = confirm("是否同时清除数据目录？此操作不可恢复")
+		}
+		if remove {
 			if err := os.RemoveAll(dataDir); err != nil {
 				fmt.Printf("提示: 清除数据目录失败（%v）\n", err)
 			} else {
-				fmt.Printf("已清除数据目录: %s\n", dataDir)
+				donePrint("已清除数据目录:", dataDir)
 			}
 		} else {
-			fmt.Printf("数据目录已保留: %s\n", dataDir)
+			donePrint("已保留数据目录:", dataDir)
 		}
 	}
 	if installDir != "" && installDir != dataDir && dirExists(installDir) {
 		fmt.Printf("安装目录位于: %s\n", installDir)
-		if confirm("是否同时移除空安装目录？") {
+		if o.purge || confirm("是否同时移除空安装目录？") {
 			if emptyDir(installDir) {
 				_ = os.Remove(installDir)
-				fmt.Printf("已移除安装目录: %s\n", installDir)
+				donePrint("已移除安装目录:", installDir)
 			} else {
 				fmt.Printf("安装目录非空，已保留: %s\n", installDir)
 			}

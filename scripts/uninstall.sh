@@ -32,24 +32,32 @@ VIDEO_DIR=""
 INSTALL_DIR=""
 RECORD_FILE="/etc/fan-video-ct.conf"
 SERVICE_FILE="/etc/systemd/system/fan-video-ct.service"
+WRAPPER_FILE="/usr/local/bin/${APP_NAME}"
 DEFAULT_INSTALL_DIR="/var/lib/fan-video-ct"
 DEFAULT_DATA_DIR="/var/lib/fan-video-ct/data"
 PID_FILE="/var/run/fan-video-ct.pid"
 
 PURGE=0
 YES=0
+NOOP=0
 for arg in "$@"; do
   case "$arg" in
     -y|--yes) YES=1 ;;
-    --purge) PURGE=1 ;;
+    --purge|--delete-data) PURGE=1 ;;
+    --keep-data) NOOP=1 ;;
     -h|--help)
       printf "%s\n" "${gl_lan}fan-video-ct${reset} 卸载脚本"
       printf "  %-14s %s\n" "-y, --yes" "免交互（未指定清除数据目录）"
       printf "  %-14s %s\n" "--purge" "同时清除数据目录（不可恢复）"
+      printf "  %-14s %s\n" "--keep-data" "卸载时保留数据目录"
       exit 0 ;;
     *) error "未知参数: $arg（-h 查看帮助）" ;;
   esac
 done
+
+if [ "${PURGE}" = "1" ] && [ "${NOOP}" = "1" ]; then
+  error "--purge 与 --keep-data 不能同时使用"
+fi
 
 DATA_DIR="${DEFAULT_DATA_DIR}"
 INSTALL_DIR="${DEFAULT_INSTALL_DIR}"
@@ -95,13 +103,23 @@ else
   skip "未发现二进制 ${BIN_PATH}"
 fi
 
+# 2b. 移除命令行入口软链
+if [ -L "${WRAPPER_FILE}" ]; then
+  rm -f "${WRAPPER_FILE}"
+  ok "已移除命令行入口 ${gl_bai}${WRAPPER_FILE}${reset}"
+else
+  skip "未发现命令行入口 ${WRAPPER_FILE}"
+fi
+
 # 3. 移除安装记录
 rm -f "${RECORD_FILE}"
 ok "已移除安装记录 ${gl_bai}${RECORD_FILE}${reset}"
 
 # 4. 数据目录
 if [ -d "${DATA_DIR}" ]; then
-  if [ "${PURGE}" = "1" ]; then
+  if [ "${NOOP}" = "1" ]; then
+    skip "数据目录已保留（--keep-data）: ${DATA_DIR}"
+  elif [ "${PURGE}" = "1" ]; then
     rm -rf "${DATA_DIR}"
     ok "已清除数据目录 ${gl_bai}${DATA_DIR}${reset}"
   elif [ "${YES}" = "1" ]; then

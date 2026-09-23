@@ -58,6 +58,7 @@ DATA_DIR=""
 VIDEO_DIR=""
 RECORD_FILE="/etc/fan-video-ct.conf"
 SERVICE_FILE="/etc/systemd/system/fan-video-ct.service"
+WRAPPER_FILE="/usr/local/bin/${APP_NAME}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)"
 DEFAULT_BIN_SRC="${SCRIPT_DIR}/../fan-video-ct"
 
@@ -303,6 +304,10 @@ cp -f "${BIN_SRC}" "${BIN_PATH}"
 chmod +x "${BIN_PATH}"
 ok "已安装二进制至 ${gl_bai}${BIN_PATH}${reset}"
 
+ok "创建命令行入口 ${gl_bai}${WRAPPER_FILE}${reset}"
+mkdir -p "$(dirname "${WRAPPER_FILE}")"
+ln -sfn "${BIN_PATH}" "${WRAPPER_FILE}"
+
 ok "创建数据目录 ${gl_lan}${DATA_DIR}${reset}"
 mkdir -p "${DATA_DIR}"
 chmod 755 "${DATA_DIR}"
@@ -379,4 +384,5 @@ if [ "${USE_SYSTEMD}" = "y" ]; then
 else
   printf "  %s\n" "  ${gl_huang}注意：${reset}后台运行模式在系统重启后不会自动恢复。"
 fi
+printf "  %s\n" "  ${gl_hui}管理命令：${APP_NAME} status/restart/uninstall ｜ ${APP_NAME} help 查看全部${reset}"
 sep_line
