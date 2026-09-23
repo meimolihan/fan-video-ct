@@ -201,6 +201,24 @@ jobs:
           fetch-depth: 0
           ref: ${{ format('refs/tags/{0}', github.event.inputs.tag) }}
 
+      - name: Ensure CNB repository exists
+        if: ${{ env.CNB_TOKEN != '' }}
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_ACCESS_TOKEN }}
+        run: |
+          # 幂等：CNB 目标仓库不存在时先通过 OpenAPI 创建，存在/无权限则交由 git-sync 校验
+          HTTP_CODE=$(curl -s -o /tmp/cnb_repo.json -w '%{http_code}' \
+            -X POST "https://api.cnb.cool/meimolihan/-/repos" \
+            -H "Authorization: Bearer ${CNB_TOKEN}" \
+            -H "Accept: application/vnd.cnb.api+json" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"fan-video-ct","description":"fan-video-ct 视频剪切工具（与 GitHub 仓库 main + 全部 tag 同步）","visibility":"public"}')
+          echo "Create CNB repo status: ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "201" ]; then
+            echo "非 201（可能已存在），内容如下，继续由同步步骤校验："
+            cat /tmp/cnb_repo.json || true
+          fi
+
       - name: Sync to CNB Repository
         if: ${{ env.CNB_TOKEN != '' }}
         env:
