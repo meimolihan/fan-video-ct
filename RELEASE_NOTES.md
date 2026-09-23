@@ -1,25 +1,22 @@
-# 发版说明
+v1.0.0 正式版：UI 第三轮修复（Toast 点击穿透/空态覆盖/触屏热区 44px/超窄屏溢出/播放条轨道/移动端 hover 移除）
 
-> 本文件由 `scripts/build-and-push.sh` 自动重写（含发版备注与安装命令）。
-> 手动发布外发的说明请直接编辑本文件。
-
-## 安装
-
-### Docker
-
+## Docker 安装
 ```bash
 docker pull mobufan/fan-video-ct:latest
-docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct/data:/data mobufan/fan-video-ct
+docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.0
 ```
-
-### 二进制（systemd 服务）
 
 ```bash
-bash -c "$(curl -sSL https://raw.githubusercontent.com/meimolihan/fan-video-ct/main/scripts/install.sh)" -p 8788 -d /var/lib/fan-video-ct -s /vol1/1000/Video
+docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.0
 ```
 
-### 卸载
+## 二进制安装
+### Linux amd64 / arm64
+```bash
+bash -c "$(curl -sSL https://raw.githubusercontent.com/meimolihan/fan-video-ct/main/scripts/install.sh)" -p 8788
+```
 
+## 二进制卸载
 ```bash
 bash -c "$(curl -sSL https://raw.githubusercontent.com/meimolihan/fan-video-ct/main/scripts/uninstall.sh)" -y
 ```
