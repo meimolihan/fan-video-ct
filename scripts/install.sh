@@ -312,6 +312,14 @@ ok "创建数据目录 ${gl_lan}${DATA_DIR}${reset}"
 mkdir -p "${DATA_DIR}"
 chmod 755 "${DATA_DIR}"
 
+# 封面 / 剪切输出 子目录：与应用内 CoversDir()/OutputDir() 一致（默认均位于数据目录下）
+ok "创建封面目录 ${gl_lan}${DATA_DIR}/covers${reset}"
+mkdir -p "${DATA_DIR}/covers"
+chmod 755 "${DATA_DIR}/covers"
+ok "创建剪切输出目录 ${gl_lan}${DATA_DIR}/output${reset}"
+mkdir -p "${DATA_DIR}/output"
+chmod 755 "${DATA_DIR}/output"
+
 # ---- write install record ----
 mkdir -p "$(dirname "${RECORD_FILE}")"
 cat > "${RECORD_FILE}" <<EOF
