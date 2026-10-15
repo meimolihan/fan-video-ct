@@ -26,12 +26,21 @@ const (
 	TaskCancelled = "cancelled"
 )
 
+// 剪切结果的保存目标
+const (
+	// SaveTargetDefault 保存到软件数据目录（app.output_dir 解析结果，默认值）
+	SaveTargetDefault = "default"
+	// SaveTargetSource 保存到原视频所在目录（仅修改文件名，不改变目录）
+	SaveTargetSource = "source"
+)
+
 // Task 剪切任务。
 type Task struct {
 	ID         string    `json:"id"`
 	Path       string    `json:"path"`
 	Output     string    `json:"output"`
 	OutputName string    `json:"output_name"`
+	SaveTarget string    `json:"save_target"`
 	Mode       string    `json:"mode"`
 	Start      float64   `json:"start"`
 	End        float64   `json:"end"`
@@ -84,6 +93,24 @@ type TaskMeta struct {
 	Start      float64
 	End        float64
 	OutputName string
+	// SaveTarget 保存目标（SaveTargetDefault / SaveTargetSource），留空按默认处理
+	SaveTarget string
+}
+
+// OutputTarget 描述一个可选的输出保存位置（供前端弹窗展示绝对路径）。
+type OutputTarget struct {
+	// ID 保存目标标识（default / source）
+	ID string `json:"id"`
+	// Label 前端展示名
+	Label string `json:"label"`
+	// Dir 目标目录绝对路径
+	Dir string `json:"dir"`
+	// File 按当前文件名推算出的输出文件绝对路径（不可用时为空）
+	File string `json:"file,omitempty"`
+	// Available 目录是否存在且可写
+	Available bool `json:"available"`
+	// Reason 不可用原因（Available 为 false 时给出）
+	Reason string `json:"reason,omitempty"`
 }
 
 // Create 创建并调度剪切任务。
@@ -107,14 +134,19 @@ func (m *TaskManager) Create(ctx context.Context, meta TaskMeta) (*Task, error) 
 	if !strings.HasSuffix(strings.ToLower(name), ext) {
 		name += ext
 	}
-	name = uniqueName(m.cfg.OutputDir(), name)
-	outPath := filepath.Join(m.cfg.OutputDir(), name)
+	outDir, err := m.resolveOutputDir(meta.SaveTarget, meta.Path)
+	if err != nil {
+		return nil, err
+	}
+	name = uniqueName(outDir, name)
+	outPath := filepath.Join(outDir, name)
 
 	task := &Task{
 		ID:         uuid.NewString(),
 		Path:       meta.Path,
 		Output:     outPath,
 		OutputName: name,
+		SaveTarget: normalizeSaveTarget(meta.SaveTarget),
 		Mode:       meta.Mode,
 		Start:      meta.Start,
 		End:        meta.End,
@@ -262,6 +294,101 @@ func (m *TaskManager) CleanFinished() int {
 }
 
 // ==================== 工具函数 ====================
+
+// normalizeSaveTarget 归一化保存目标；空值或非法值一律回退到默认目录。
+func normalizeSaveTarget(target string) string {
+	if target == SaveTargetSource {
+		return SaveTargetSource
+	}
+	return SaveTargetDefault
+}
+
+// sourceDirOf 返回原视频所在目录。要求源路径为绝对路径，
+// 以保证弹窗展示与实际写入的目录恒为绝对路径（前端明确要求显示绝对路径）。
+func sourceDirOf(srcPath string) (string, error) {
+	clean := filepath.Clean(strings.TrimSpace(srcPath))
+	if clean == "" || clean == "." {
+		return "", fmt.Errorf("无法确定原视频所在目录")
+	}
+	if !filepath.IsAbs(clean) {
+		return "", fmt.Errorf("原视频路径不是绝对路径")
+	}
+	return filepath.Dir(clean), nil
+}
+
+// resolveOutputDir 按保存目标解析输出目录。跟随原视频时取源文件所在目录，
+// 目录不存在 / 非目录 / 不可写时返回可读错误，避免任务跑到一半才失败。
+func (m *TaskManager) resolveOutputDir(target, srcPath string) (string, error) {
+	if normalizeSaveTarget(target) != SaveTargetSource {
+		return m.cfg.OutputDir(), nil
+	}
+	dir, err := sourceDirOf(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("跟随原视频保存失败：%w", err)
+	}
+	if err := checkDirWritable(dir); err != nil {
+		return "", fmt.Errorf("跟随原视频保存失败：%s（%s）", dir, err)
+	}
+	return dir, nil
+}
+
+// checkDirWritable 校验目录存在且可写：以临时文件探测并立即清理，
+// 避免只凭权限位判断（ACL、只读挂载、网络盘等场景权限位不可靠）。
+func checkDirWritable(dir string) error {
+	st, err := os.Stat(dir)
+	if err != nil {
+		return fmt.Errorf("目录不可访问")
+	}
+	if !st.IsDir() {
+		return fmt.Errorf("不是目录")
+	}
+	f, err := os.CreateTemp(dir, ".fan-video-ct-probe-*")
+	if err != nil {
+		return fmt.Errorf("目录不可写")
+	}
+	// 用 defer 保证任何返回路径都不会在用户目录里留下探针文件
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	}()
+	return nil
+}
+
+// OutputTargets 返回给定源视频的全部可选保存位置，含绝对路径与可写性，
+// 供前端“保存位置”弹窗展示；与 Create 共用同一套命名 / 目录解析逻辑。
+func (m *TaskManager) OutputTargets(srcPath, outputName, mode string) []OutputTarget {
+	ext := ffmpeg.OutputExtension(srcPath, ffmpeg.CutMode(mode))
+	name := sanitizeOutputName(outputName, srcPath)
+	if !strings.HasSuffix(strings.ToLower(name), ext) {
+		name += ext
+	}
+
+	sourceDir, sourceErr := sourceDirOf(srcPath)
+	defs := []struct {
+		id, label string
+		dir       string
+		err       error
+	}{
+		{SaveTargetDefault, "软件数据目录", m.cfg.OutputDir(), nil},
+		{SaveTargetSource, "跟随原视频保存", sourceDir, sourceErr},
+	}
+
+	targets := make([]OutputTarget, 0, len(defs))
+	for _, d := range defs {
+		t := OutputTarget{ID: d.id, Label: d.label, Dir: d.dir}
+		// 目录无法定位时只给原因、不暴露任何路径；否则探测可写性并推算完整文件路径
+		if d.err != nil {
+			t.Reason = d.err.Error()
+		} else if err := checkDirWritable(d.dir); err != nil {
+			t.Reason = err.Error()
+		} else {
+			t.Available = true
+			t.File = filepath.Join(d.dir, uniqueName(d.dir, name))
+		}
+		targets = append(targets, t)
+	}
+	return targets
+}
 
 var invalidNameChars = regexp.MustCompile(`[\\/:*?"<>|\r\n]`)
 

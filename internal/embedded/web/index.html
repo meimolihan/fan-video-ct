@@ -17,9 +17,10 @@
 </head>
 <body>
   <div id="splash">
-    <img class="splash-logo" src="/favicon.svg" alt="" width="96" height="96">
-    <div class="splash-title">视频剪切工具</div>
-    <div class="splash-spinner"></div>
+    <div class="splash-mark"><img src="/favicon.svg" alt="" width="74" height="74"></div>
+    <div class="splash-name">视频剪切工具</div>
+    <div class="splash-sub">fan-video-ct</div>
+    <div class="splash-progress" aria-hidden="true"><i></i></div>
   </div>
   <header class="topbar">
     <div class="brand">
@@ -46,7 +47,14 @@
     <section class="panel workpanel">
       <div class="video-wrap">
         <video id="player" playsinline preload="metadata"></video>
-        <div id="video-empty" class="video-empty">从左侧选择一个视频开始剪切</div>
+        <div id="video-empty" class="video-empty">
+          <svg class="video-empty-art" width="280" height="160" viewBox="0 0 280 160" fill="none" aria-hidden="true">
+            <rect x="60" y="45" width="130" height="70" rx="8" stroke="currentColor" stroke-width="2"/>
+            <path d="M190 55L225 40v80L190 105Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <circle cx="125" cy="80" r="18" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>从左侧选择一个视频开始剪切</span>
+        </div>
         <div class="player-bar hidden" id="player-bar">
           <button id="btn-play" class="pbtn" title="播放 / 暂停">▶</button>
           <button id="btn-play-start" class="pbtn pbtn-label" title="从起点锚点播放到终点自动停止">▶ 起点</button>
@@ -67,11 +75,11 @@
       <div class="toolbar">
         <div class="mode-group">
           <label class="radio">
-            <input type="radio" name="mode" value="copy">
+            <input type="radio" name="mode" value="copy" checked>
             <span>快速剪切（不重编码）</span>
           </label>
           <label class="radio">
-            <input type="radio" name="mode" value="reencode" checked>
+            <input type="radio" name="mode" value="reencode">
             <span>精确转码（重编码）</span>
           </label>
         </div>
@@ -129,7 +137,19 @@
       </div>
 
       <div class="coverbar">
-        <img id="cover-img" alt="封面">
+        <img id="cover-img" alt="封面" hidden>
+        <div id="cover-empty" class="cover-empty" role="img" aria-label="暂无视频封面">
+          <svg width="240" height="140" viewBox="0 0 240 140" fill="none" aria-hidden="true">
+            <rect x="4" y="4" width="232" height="132" rx="10" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+            <!-- 占位图标：相框 + 太阳 + 山峰（原为「+」号，会误导为可点击添加） -->
+            <g stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none">
+              <rect x="80" y="36" width="80" height="60" rx="7"/>
+              <circle cx="99" cy="55" r="7"/>
+              <path d="M87 90l21-23 16 16 14-14 14 21"/>
+            </g>
+            <text x="120" y="115" text-anchor="middle" fill="currentColor" font-size="12" aria-hidden="true">暂无视频封面</text>
+          </svg>
+        </div>
         <div class="cover-actions">
           <label class="btn btn-sm">当前帧设为封面
             <input type="file" id="cover-file" accept="image/*" hidden>
@@ -151,6 +171,22 @@
   </main>
 
   <div id="toast" class="toast"></div>
+
+  <!-- ===== 剪切输出位置选择弹窗（纯追加，不改既有结构） ===== -->
+  <div id="save-modal" class="preset-modal" hidden aria-hidden="true">
+    <div class="preset-dialog save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title">
+      <div class="preset-head">
+        <span id="save-title" class="preset-title">选择保存位置</span>
+        <button id="save-close" class="btn btn-sm btn-icon" title="关闭" aria-label="关闭">✕</button>
+      </div>
+      <div class="preset-hint">请选择剪切后视频的保存位置，下方为绝对路径（文件名可在工具栏「输出文件名」中修改）。</div>
+      <div class="save-list" id="save-list" role="radiogroup" aria-label="保存位置"></div>
+      <div class="preset-foot save-foot">
+        <button id="save-cancel" class="btn">取消</button>
+        <button id="save-confirm" class="btn btn-primary">确认并开始剪切</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== 片头片尾预设弹窗（纯增 / 追加，不改既有结构） ===== -->
   <div id="preset-modal" class="preset-modal" hidden aria-hidden="true">

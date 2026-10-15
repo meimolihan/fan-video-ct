@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/meimolihan/fan-video-ct/internal/ffmpeg"
 	"github.com/meimolihan/fan-video-ct/internal/service"
 )
 
@@ -18,7 +20,7 @@ type cutTaskHandler struct {
 	log *zap.SugaredLogger
 }
 
-// create POST /api/tasks  body: {path, mode, start, end, output_name}
+// create POST /api/tasks  body: {path, mode, start, end, output_name, save_target}
 func (h *cutTaskHandler) create(c *gin.Context) {
 	var req struct {
 		Path       string  `json:"path"`
@@ -26,6 +28,7 @@ func (h *cutTaskHandler) create(c *gin.Context) {
 		Start      float64 `json:"start"`
 		End        float64 `json:"end"`
 		OutputName string  `json:"output_name"`
+		SaveTarget string  `json:"save_target"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效: " + err.Error()})
@@ -38,6 +41,7 @@ func (h *cutTaskHandler) create(c *gin.Context) {
 		Start:      req.Start,
 		End:        req.End,
 		OutputName: req.OutputName,
+		SaveTarget: req.SaveTarget,
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
@@ -47,6 +51,23 @@ func (h *cutTaskHandler) create(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"task": task})
+}
+
+// outputTargets GET /api/tasks/output-targets?path=&name=&mode=
+// 返回可选保存位置（软件数据目录 / 跟随原视频）的绝对路径与可写性。
+func (h *cutTaskHandler) outputTargets(c *gin.Context) {
+	p := c.Query("path")
+	if strings.TrimSpace(p) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 path 参数"})
+		return
+	}
+	mode := c.DefaultQuery("mode", "reencode")
+	if !ffmpeg.ValidMode(mode) {
+		mode = "reencode"
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"targets": h.svc.Tasks.OutputTargets(p, c.Query("name"), mode),
+	})
 }
 
 // list GET /api/tasks

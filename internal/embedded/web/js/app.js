@@ -108,7 +108,9 @@
   const selectVideo = (path) => {
     state.path = path;
     renderFileList$active(path);
-    $('#video-empty').style.display = 'none';
+    // 用 hidden 属性而非内联 style.display：内联 display:block 会覆盖样式表的
+    // display:flex，导致关闭视频后空态提示丢失居中（见 .video-empty 覆盖层）
+    $('#video-empty').hidden = true;
     player.removeAttribute('src');
     player.load();
 
@@ -202,9 +204,15 @@
     timelineProgress.style.width = pct(state.end - state.start) + '%';
     $('#time-start').textContent = fmtTime(state.start);
     $('#time-end').textContent = fmtTime(state.end);
-    const note = currentMode() === 'copy' && state.keyframes.length
-      ? `<div class="stat-msg keyframe-note">实际剪切将对齐关键帧：<b>${fmtTime(snapToFrame(state.start))}</b> ~ <b>${fmtTime(snapToFrame(state.end))}</b></div>`
-      : '';
+    // 关键帧提示：吸附后区间有效才显示对齐时间，否则明确告知无关键帧可用
+    let note = '';
+    if (currentMode() === 'copy' && state.keyframes.length) {
+      const ks = snapToFrame(state.start);
+      const ke = snapToFrame(state.end);
+      note = ke - ks > 0
+        ? `<div class="stat-msg keyframe-note">实际剪切将对齐关键帧：<b>${fmtTime(ks)}</b> ~ <b>${fmtTime(ke)}</b></div>`
+        : '<div class="stat-msg keyframe-note keyframe-warn">该片段内无可用关键帧，将按原始时间剪切（可能有轻微偏移）</div>';
+    }
     $('#seg-box').innerHTML =
       `<div class="stat-msg"><span class="seg-badge">剪切片段</span>` +
       `<b>${fmtTime(state.start)}</b> ~ <b>${fmtTime(state.end)}</b>` +
@@ -457,7 +465,7 @@
     state.end = 0;
     state.hasCover = false;
     state.keyframes = [];
-    $('#video-empty').style.display = 'block';
+    $('#video-empty').hidden = false;
     playerBar.classList.add('hidden');
     $('#time-dur').textContent = '时长 --';
     $('#time-start').textContent = '00:00:00';
@@ -552,19 +560,123 @@
     });
   });
 
+  /* ---------- 剪切输出位置选择 ---------- */
+  const saveModal = $('#save-modal');
+  const saveListBox = $('#save-list');
+  let saveTargets = [];
+  let savePicked = '';
+
+  // 拉取两个可选保存位置的绝对路径与可写性，渲染成可选卡片
+  const openSaveModal = async () => {
+    const name = $('#output-name').value.trim();
+    const mode = currentMode();
+    let data;
+    try {
+      const r = await fetch('/api/tasks/output-targets?path=' + encodeURIComponent(state.path) +
+        '&name=' + encodeURIComponent(name) + '&mode=' + encodeURIComponent(mode));
+      data = await r.json();
+    } catch (e) {
+      toast('获取保存位置失败: ' + e.message, 'err');
+      return;
+    }
+    if (data.error) { toast(data.error, 'err'); return; }
+    saveTargets = data.targets || [];
+    const okList = saveTargets.filter((t) => t.available);
+    if (!okList.length) { toast('没有可写的保存位置', 'err'); return; }
+    // 默认选中「软件数据目录」，不可写时回退到第一个可用项
+    savePicked = (okList.find((t) => t.id === 'default') || okList[0]).id;
+    renderSaveTargets();
+    saveModal.hidden = false;
+    document.body.classList.add('save-open');
+  };
+
+  // 原地同步选中态，不重建节点（保住焦点与滚动位置）
+  // 单一事实来源是 .active 类，「已选择」标签由 CSS 派生，无需再存一份 DOM 状态
+  const syncSaveTargets = () => {
+    saveTargets.forEach((t, i) => {
+      const el = saveListBox.children[i];
+      if (!el) return;
+      const on = t.id === savePicked;
+      el.classList.toggle('active', on);
+      el.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  };
+
+  // 构建一次 DOM，之后仅原地切换选中态：整体重建会丢失键盘焦点
+  const renderSaveTargets = () => {
+    saveListBox.innerHTML = '';
+    saveTargets.forEach((t) => {
+      const el = document.createElement('div');
+      el.className = 'save-opt' + (t.available ? '' : ' disabled');
+      el.setAttribute('role', 'radio');
+      el.setAttribute('aria-checked', 'false');
+      el.setAttribute('title', t.file || t.dir || '');
+      el.tabIndex = t.available ? 0 : -1;
+      el.innerHTML =
+        `<span class="save-opt-dot"></span>` +
+        `<span class="save-opt-main">` +
+          `<span class="save-opt-label">${esc(t.label)}` +
+            '<span class="save-opt-tag save-opt-tag-pick">已选择</span>' +
+            (t.available ? '' : '<span class="save-opt-tag save-opt-tag-off">不可用</span>') +
+          `</span>` +
+          // 绝对路径：优先展示推算出的完整文件路径，退化时展示目录
+          `<span class="save-opt-path">${esc(t.file || t.dir || '（不可用）')}</span>` +
+          (t.reason ? `<span class="save-opt-reason">${esc(t.reason)}</span>` : '') +
+        `</span>`;
+      if (t.available) {
+        el.addEventListener('click', () => { savePicked = t.id; syncSaveTargets(); });
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            savePicked = t.id;
+            syncSaveTargets();
+          }
+        });
+      }
+      saveListBox.appendChild(el);
+    });
+    syncSaveTargets();
+  };
+
+  const closeSaveModal = () => {
+    saveModal.hidden = true;
+    document.body.classList.remove('save-open');
+  };
+
+  // 点击「开始剪切」：先做原有前置校验，通过后弹出保存位置选择
   const createTask = () => {
+    if (!state.path) { toast('请先选择一个视频', 'err'); return; }
+    if (state.end - state.start <= 0) { toast('剪切区间无效', 'err'); return; }
+    openSaveModal();
+  };
+
+  // 确认后按所选保存位置提交任务
+  const submitTask = (saveTarget) => {
     if (!state.path) { toast('请先选择一个视频', 'err'); return; }
     if (state.end - state.start <= 0) { toast('剪切区间无效', 'err'); return; }
     const mode = currentMode();
     const name = $('#output-name').value.trim();
+    let start = state.start;
+    let end = state.end;
+    // copy 模式吸附关键帧；若关键帧稀疏（如长 GOP 录屏）导致区间塌缩为 0，
+    // 则退回原始时间点，否则用户会看到莫名其妙的「剪切区间无效」且无法剪切
+    if (mode === 'copy') {
+      const s = snapToFrame(start);
+      const e = snapToFrame(end);
+      if (e - s > 0) {
+        start = s; end = e;
+      } else {
+        toast('该片段内无可用关键帧，已按原始时间剪切（可能有轻微偏移）', 'err');
+      }
+    }
     const body = {
       path: state.path,
       mode,
-      start: snapToFrame(state.start),
-      end: snapToFrame(state.end),
+      start,
+      end,
       output_name: name,
+      save_target: saveTarget,
     };
-    if (mode === 'copy' && body.end - body.start <= 0) { toast('剪切区间无效', 'err'); return; }
     fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -573,7 +685,8 @@
       .then((r) => r.json())
       .then((d) => {
         if (d.error) { toast(d.error, 'err'); return; }
-        toast('已创建剪切任务', 'ok');
+        const dst = d.task && d.task.output ? d.task.output : '';
+        toast(dst ? '已创建剪切任务 → ' + dst : '已创建剪切任务', 'ok');
         refreshTasks();
       })
       .catch((e) => toast('创建任务失败: ' + e.message, 'err'));
@@ -632,6 +745,16 @@
     }
   });
 
+  /* ---------- 剪切输出位置弹窗：事件绑定 ---------- */
+  $('#save-confirm').addEventListener('click', () => {
+    const target = savePicked;
+    closeSaveModal();
+    submitTask(target);
+  });
+  $('#save-cancel').addEventListener('click', closeSaveModal);
+  $('#save-close').addEventListener('click', closeSaveModal);
+  saveModal.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
+
   $('#btn-cut').addEventListener('click', createTask);
   $('#btn-clean').addEventListener('click', () => {
     fetch('/api/tasks', { method: 'DELETE' })
@@ -642,9 +765,17 @@
   /* ---------- 封面 ---------- */
   const refreshCover = () => {
     const img = $('#cover-img');
-    if (!state.path) { img.classList.add('cover-none'); img.src = ''; return; }
-    img.classList.remove('cover-none');
+    const empty = $('#cover-empty');
+    // 未选视频：隐藏 img，显示 SVG 占位预览
+    if (!state.path) {
+      img.hidden = true;
+      img.removeAttribute('src');
+      empty.hidden = false;
+      return;
+    }
     // 无自定义封面时默认显示首帧预览
+    img.hidden = false;
+    empty.hidden = true;
     img.src = state.hasCover
       ? '/api/cover?path=' + encodeURIComponent(state.path) + '&_=' + Date.now()
       : '/api/cover/preview?path=' + encodeURIComponent(state.path) + '&t=0&_=' + Date.now();
@@ -731,9 +862,9 @@
       const s = $('#splash');
       if (s) {
         s.classList.add('hide');
-        setTimeout(() => s.classList.add('remove'), 350);
+        setTimeout(() => s.classList.add('remove'), 360);
       }
-    }, 350);
+    }, 620);
     loadVersion();
     loadDir('');
     refreshTasks();
@@ -968,6 +1099,6 @@
   presetModal.addEventListener('click', (e) => { if (e.target === presetModal) closePresetModal(); });
   presetFormModal.addEventListener('click', (e) => { if (e.target === presetFormModal) closePresetForm(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closePresetForm(); closePresetModal(); }
+    if (e.key === 'Escape') { closeSaveModal(); closePresetForm(); closePresetModal(); }
   });
 })();

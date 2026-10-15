@@ -74,6 +74,8 @@ func (h *Handler) Router() *gin.Engine {
 		api.GET("/tasks", h.cut.list)
 		api.POST("/tasks", h.cut.create)
 		api.DELETE("/tasks", h.cut.cleanFinished)
+		// 静态段须先于 /tasks/:id 注册，避免被通配吞掉
+		api.GET("/tasks/output-targets", h.cut.outputTargets)
 		api.GET("/tasks/:id", h.cut.get)
 		api.DELETE("/tasks/:id", h.cut.cancel)
 		api.GET("/tasks/:id/download", h.cut.download)
