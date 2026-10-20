@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/meimolihan/fan-video-ct/internal/config"
 	"github.com/meimolihan/fan-video-ct/internal/ffmpeg"
@@ -277,6 +279,14 @@ func (m *MediaService) Remove(path string) (string, error) {
 		return "", fmt.Errorf("无法访问目标: %w", err)
 	}
 	if err := os.RemoveAll(orig); err != nil {
+		// 权限/只读属于部署层面的常见问题，给出可操作提示而非裸露的 errno。
+		// EROFS 不被 errors.Is(err, fs.ErrPermission) 覆盖，需单独判断。
+		if errors.Is(err, syscall.EROFS) {
+			return "", fmt.Errorf("删除失败：该目录以只读方式挂载，无法删除（请检查容器卷挂载是否带 :ro）: %w", err)
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return "", fmt.Errorf("删除失败：容器内应用用户无权删除该文件（请检查目录挂载的读写权限与应用用户权限）: %w", err)
+		}
 		return "", fmt.Errorf("删除失败: %w", err)
 	}
 	return target, nil
