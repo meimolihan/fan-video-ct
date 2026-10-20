@@ -16,6 +16,7 @@ type Service struct {
 	Covers  *CoverService
 	Tasks   *TaskManager
 	Presets *PresetManager
+	Uploads *UploadService
 }
 
 // New 构建 Service。
@@ -28,6 +29,7 @@ func New(cfg *config.Config, ffc *ffmpeg.Client, log *zap.SugaredLogger) *Servic
 	s.Media = NewMediaService(cfg, ffc, log)
 	s.Covers = NewCoverService(ffc, cfg.CoversDir(), log)
 	s.Tasks = NewTaskManager(cfg, ffc, log)
+	s.Uploads = NewUploadService(cfg, log)
 	pm, err := NewPresetManager(cfg.App.DataDir)
 	if err != nil {
 		log.Errorf("初始化片头片尾预设失败（已用内置默认值兜底）: %v", err)

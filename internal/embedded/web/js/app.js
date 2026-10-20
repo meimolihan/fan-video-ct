@@ -829,18 +829,213 @@
       .catch((e) => toast('移除封面失败: ' + e.message, 'err'));
   });
 
+  /* ---------- 视频上传（按钮 / 拖拽 / 粘贴 + 队列：进度、取消、重试） ---------- */
+  // 与后端 service.videoExts 保持一致的白名单（客户端预筛，服务端还会校验）
+  const UPLOAD_VIDEO_EXTS = ['mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v', 'ts', '3gp', 'rmvb', 'mpg', 'mpeg', 'm2ts', 'rm'];
+  const UPLOAD_MAX_CONCURRENT = 2;
+  const uploadQueue = []; // {id,name,size,loaded,status,file,xhr,err,path}
+  let uploadSeq = 0;
+  let uploadsDir = '';
+  let firstDonePath = '';
+  let uqHideTimer = null;
+  let uqLastRender = 0;
+
+  const isVideoExt = (name) => {
+    const m = /\.([a-z0-9]+)$/i.exec(name || '');
+    return !!m && UPLOAD_VIDEO_EXTS.indexOf(m[1].toLowerCase()) !== -1;
+  };
+
+  const uqActive = () => uploadQueue.some((i) => i.status === 'pending' || i.status === 'uploading');
+
+  const renderUploadQueue = (force) => {
+    const now = Date.now();
+    if (!force && now - uqLastRender < 90) return;
+    uqLastRender = now;
+    const box = $('#uq-list');
+    const card = $('#upload-queue');
+    if (!uploadQueue.length) { card.hidden = true; return; }
+    card.hidden = false;
+    box.innerHTML = '';
+    uploadQueue.forEach((it) => {
+      const pct = it.size > 0 ? Math.min(100, Math.floor(it.loaded / it.size * 100)) : 0;
+      const statusText = it.status === 'done' ? '✓ 完成'
+        : it.status === 'error' ? '✕ ' + (it.err || '失败')
+        : it.status === 'canceled' ? '已取消'
+        : it.status === 'uploading' ? pct + '%'
+        : '等待中';
+      const row = document.createElement('div');
+      row.className = 'uq-item';
+      row.innerHTML =
+        '<div class="uq-row">' +
+          '<span class="uq-name" title="' + esc(it.name) + '">' + esc(it.name) + '</span>' +
+          '<span class="uq-size">' + fmtSize(it.size) + '</span>' +
+          (it.status === 'pending' || it.status === 'uploading'
+            ? '<button class="uq-btn" data-act="cancel" title="取消">✕</button>'
+            : it.status === 'error'
+              ? '<button class="uq-btn" data-act="retry" title="重试">↻</button>'
+              : '') +
+        '</div>' +
+        '<div class="uq-bar"><i class="' + it.status + '" style="width:' + (it.status === 'done' ? 100 : pct) + '%"></i></div>' +
+        '<div class="uq-status ' + it.status + '">' + esc(statusText) + '</div>';
+      row.querySelectorAll('[data-act]').forEach((btn) => {
+        btn.onclick = () => {
+          if (btn.getAttribute('data-act') === 'cancel') {
+            if (it.xhr) it.xhr.abort();
+            else { it.status = 'canceled'; renderUploadQueue(true); onUploadSettled(); }
+          } else {
+            it.status = 'pending'; it.loaded = 0; it.err = '';
+            renderUploadQueue(true); pumpUploads();
+          }
+        };
+      });
+      box.appendChild(row);
+    });
+    const done = uploadQueue.filter((i) => i.status === 'done').length;
+    $('#uq-stat').textContent = done + '/' + uploadQueue.length;
+    $('#uq-clear').hidden = uqActive();
+  };
+
+  const enqueueFiles = (files) => {
+    const arr = Array.from(files || []);
+    if (!arr.length) return;
+    let skipped = 0;
+    arr.forEach((f) => {
+      if (!isVideoExt(f.name)) { skipped++; return; }
+      uploadQueue.push({ id: ++uploadSeq, name: f.name, size: f.size, loaded: 0, status: 'pending', file: f, xhr: null, err: '' });
+    });
+    clearTimeout(uqHideTimer);
+    if (skipped) toast('已跳过 ' + skipped + ' 个非视频文件', 'err');
+    renderUploadQueue(true);
+    pumpUploads();
+  };
+
+  const pumpUploads = () => {
+    let slots = UPLOAD_MAX_CONCURRENT - uploadQueue.filter((i) => i.status === 'uploading').length;
+    for (const it of uploadQueue) {
+      if (slots <= 0) break;
+      if (it.status === 'pending') { startUpload(it); slots--; }
+    }
+  };
+
+  const startUpload = (it) => {
+    it.status = 'uploading';
+    const fd = new FormData();
+    fd.append('file', it.file);
+    const xhr = new XMLHttpRequest();
+    it.xhr = xhr;
+    xhr.open('POST', '/api/media/upload');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) { it.loaded = e.loaded; renderUploadQueue(); }
+    };
+    xhr.onload = () => {
+      it.xhr = null;
+      let d = {};
+      try { d = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
+      if (xhr.status === 200 && d.ok) {
+        it.status = 'done';
+        it.path = d.path;
+        uploadsDir = d.dir || uploadsDir;
+        if (!firstDonePath) firstDonePath = d.path;
+        if (d.renamed) it.err = ''; // 重名自动改名不视为失败，名称以最终文件名为准
+        if (d.renamed && d.name) it.name = d.name;
+      } else {
+        it.status = 'error';
+        it.err = d.error || ('HTTP ' + xhr.status);
+      }
+      renderUploadQueue(true);
+      onUploadSettled();
+    };
+    xhr.onerror = () => {
+      it.xhr = null; it.status = 'error'; it.err = '网络错误';
+      renderUploadQueue(true); onUploadSettled();
+    };
+    xhr.onabort = () => {
+      it.xhr = null;
+      if (it.status === 'uploading') it.status = 'canceled';
+      renderUploadQueue(true); onUploadSettled();
+    };
+    xhr.send(fd);
+    renderUploadQueue(true);
+  };
+
+  // 队列全部结束时：刷新列表、跳转上传目录并自动选中第一个上传成功的视频
+  const onUploadSettled = () => {
+    pumpUploads();
+    if (uqActive()) return;
+    const doneCount = uploadQueue.filter((i) => i.status === 'done').length;
+    if (doneCount && firstDonePath) {
+      loadDir(uploadsDir || state.currentDir || '');
+      selectVideo(firstDonePath);
+      toast('已上传 ' + doneCount + ' 个视频到「我的上传」', 'ok');
+      firstDonePath = '';
+    }
+    // 全部成功（无失败/取消）时 4 秒后自动收起队列卡片
+    const hasProblem = uploadQueue.some((i) => i.status === 'error' || i.status === 'canceled');
+    if (doneCount && !hasProblem) {
+      clearTimeout(uqHideTimer);
+      uqHideTimer = setTimeout(() => { $('#upload-queue').hidden = true; }, 4000);
+    }
+  };
+
+  $('#btn-upload').addEventListener('click', () => $('#upload-input').click());
+  $('#upload-input').addEventListener('change', (e) => {
+    enqueueFiles(e.target.files);
+    e.target.value = '';
+  });
+  $('#uq-clear').addEventListener('click', () => {
+    for (let i = uploadQueue.length - 1; i >= 0; i--) {
+      const s = uploadQueue[i].status;
+      if (s !== 'pending' && s !== 'uploading') uploadQueue.splice(i, 1);
+    }
+    renderUploadQueue(true);
+  });
+
+  // 整窗拖拽：仅响应携带文件的拖拽，进窗口显示遮罩，松手即入队
+  let dragDepth = 0;
+  const dragHasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') !== -1;
+  window.addEventListener('dragenter', (e) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    $('#drop-overlay').hidden = false;
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  window.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) $('#drop-overlay').hidden = true;
+  });
+  window.addEventListener('drop', (e) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    $('#drop-overlay').hidden = true;
+    enqueueFiles(e.dataTransfer.files);
+  });
+
+  // 剪贴板粘贴视频文件（输入框聚焦时不拦截，避免影响正常文本粘贴）
+  window.addEventListener('paste', (e) => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    const files = e.clipboardData && e.clipboardData.files;
+    if (files && files.length) { e.preventDefault(); enqueueFiles(files); }
+  });
+
   $('#btn-refresh').addEventListener('click', () => loadDir(state.currentDir || ''));
 
-  /* ---------- 明暗主题切换（三态循环：亮 -> 暗 -> 跟随系统） ---------- */
-  const THEMES = ['light', 'dark', 'auto'];
+  /* ---------- 明暗主题（auto 为初始态：跟随系统；点击即在亮/暗间直接切换） ---------- */
   let theme = localStorage.getItem('fvct-theme') || 'auto';
   const systemIsLight = () => window.matchMedia('(prefers-color-scheme: light)').matches;
+  const effectiveDark = () => theme === 'dark' || (theme === 'auto' && !systemIsLight());
   const applyTheme = () => {
     const el = document.documentElement;
     if (theme === 'auto') el.removeAttribute('data-theme');
     else el.setAttribute('data-theme', theme);
     localStorage.setItem('fvct-theme', theme);
-    const dark = theme === 'dark' || (theme === 'auto' && !systemIsLight());
+    const dark = effectiveDark();
     const btn = $('#btn-theme');
     btn.textContent = dark ? '☀️' : '🌙';
     btn.title = theme === 'auto'
@@ -848,7 +1043,8 @@
       : '明暗主题：' + (dark ? '暗色' : '亮色') + '，点击切换';
   };
   $('#btn-theme').addEventListener('click', () => {
-    theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    // 一步到位：暗色点一次即固定为亮色，亮色点一次即固定为暗色
+    theme = effectiveDark() ? 'light' : 'dark';
     applyTheme();
   });
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {

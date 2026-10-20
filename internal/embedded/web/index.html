@@ -38,7 +38,10 @@
     <aside class="panel filepanel">
       <div class="panel-head">
         <span class="panel-title">文件</span>
-        <button id="btn-refresh" class="btn btn-sm" title="刷新">刷新</button>
+        <span class="panel-head-btns">
+          <button id="btn-upload" class="btn btn-sm" title="上传视频到「我的上传」目录">⬆ 上传</button>
+          <button id="btn-refresh" class="btn btn-sm" title="刷新">刷新</button>
+        </span>
       </div>
       <div id="file-list" class="file-list"></div>
     </aside>
@@ -171,6 +174,26 @@
   </main>
 
   <div id="toast" class="toast"></div>
+
+  <!-- ===== 视频上传：拖拽遮罩 + 上传队列（纯追加，不影响既有结构） ===== -->
+  <div id="drop-overlay" class="drop-overlay" hidden>
+    <div class="drop-card">
+      <div class="drop-icon">⤴</div>
+      <div class="drop-title">松手即上传</div>
+      <div class="drop-sub">支持多选 · 仅视频格式 · 上传到「我的上传」目录</div>
+    </div>
+  </div>
+
+  <div id="upload-queue" class="upload-queue" hidden>
+    <div class="uq-head">
+      <span class="uq-title">上传队列</span>
+      <span class="uq-stat" id="uq-stat"></span>
+      <button id="uq-clear" class="btn btn-sm" title="清除已结束的记录" hidden>清除</button>
+    </div>
+    <div class="uq-list" id="uq-list"></div>
+  </div>
+
+  <input type="file" id="upload-input" multiple accept="video/*" hidden>
 
   <!-- ===== 剪切输出位置选择弹窗（纯追加，不改既有结构） ===== -->
   <div id="save-modal" class="preset-modal" hidden aria-hidden="true">

@@ -13,8 +13,10 @@ ENV GOPROXY=${GOPROXY} CGO_ENABLED=0
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+# 构建参数可能形如 v1.0.7（tag 直传），这里统一剥掉开头的 v 再注入，
+# 与 internal/version.Current() 的归一化保持一致，避免出现 vvX.Y.Z。
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
-      -ldflags="-s -w -X github.com/meimolihan/fan-video-ct/internal/version.Version=${FCT_VERSION}" \
+      -ldflags="-s -w -X github.com/meimolihan/fan-video-ct/internal/version.Version=${FCT_VERSION#v}" \
       -o fan-video-ct .
 
 # ---------- 运行阶段 ----------

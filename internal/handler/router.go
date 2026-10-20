@@ -30,6 +30,7 @@ type Handler struct {
 	cut    *cutTaskHandler
 	cover  *coverHandler
 	preset *presetHandler
+	upload *uploadHandler
 }
 
 // New 构建 Handler。
@@ -43,6 +44,7 @@ func New(cfg *config.Config, svc *service.Service, log *zap.SugaredLogger) *Hand
 		cut:     &cutTaskHandler{svc: svc, log: log},
 		cover:   &coverHandler{svc: svc, log: log},
 		preset:  &presetHandler{svc: svc, log: log},
+		upload:  &uploadHandler{svc: svc, log: log},
 	}
 }
 
@@ -70,6 +72,7 @@ func (h *Handler) Router() *gin.Engine {
 		api.GET("/media/info", h.media.info)
 		api.GET("/media/stream", h.media.stream)
 		api.GET("/media/keyframes", h.media.keyframes)
+		api.POST("/media/upload", h.upload.upload)
 
 		api.GET("/tasks", h.cut.list)
 		api.POST("/tasks", h.cut.create)

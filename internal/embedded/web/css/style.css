@@ -2036,3 +2036,106 @@ html[data-theme="dark"] .save-opt.active .btn-danger { border-color: var(--dange
     }
   }
 }
+
+/* ==========================================================================
+   视频上传：面板按钮 / 整窗拖拽遮罩 / 上传队列
+   仅使用设计令牌变量，亮暗双主题自动适配；纯追加，不影响既有规则。
+   ========================================================================== */
+.panel-head-btns { display: flex; align-items: center; gap: 6px; }
+
+/* —— 拖拽遮罩：拖文件进窗口时全屏提示 —— */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none; /* 不拦截拖拽事件，由 window 监听统一处理 */
+}
+.drop-overlay[hidden] { display: none; }
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 56px;
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-toast);
+}
+.drop-icon { font-size: 34px; color: var(--primary); line-height: 1; }
+.drop-title { font-size: 17px; font-weight: 600; color: var(--text); }
+.drop-sub { font-size: 12px; color: var(--muted); }
+
+/* —— 上传队列卡片：右下角悬浮 —— */
+.upload-queue {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 250;
+  width: 300px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-toast);
+  font-size: 12px;
+}
+.upload-queue[hidden] { display: none; }
+.uq-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.uq-title { font-weight: 600; font-size: 13px; }
+.uq-stat { color: var(--muted); font-size: 11px; margin-left: auto; }
+.uq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  max-height: 260px;
+  overflow: auto;
+}
+.uq-item { display: flex; flex-direction: column; gap: 4px; }
+.uq-row { display: flex; align-items: center; gap: 6px; }
+.uq-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uq-size { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.uq-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.uq-btn:hover { color: var(--text); background: var(--surface-3); }
+.uq-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.uq-bar > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: var(--primary);
+  transition: width .12s linear;
+}
+.uq-bar > i.done { background: var(--ok); }
+.uq-bar > i.error { background: var(--danger); }
+.uq-bar > i.canceled { background: var(--faint); }
+.uq-status { font-size: 11px; color: var(--muted); }
+.uq-status.done { color: var(--ok); }
+.uq-status.error { color: var(--danger); }

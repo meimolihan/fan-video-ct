@@ -26,6 +26,10 @@ app:
   media_dir: ""
   # 剪切输出目录；相对路径基于 data_dir
   output_dir: output
+  # 上传视频存放目录；相对路径基于 data_dir。文件浏览器根目录会出现「我的上传」虚拟入口
+  upload_dir: uploads
+  # 上传视频大小上限（字节），默认 10GB
+  upload_max_size: 10737418240
   # 剪切任务并发数（避免同时启动多个重编码抢占 CPU）
   worker: 1
 

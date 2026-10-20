@@ -28,12 +28,27 @@ func (h *mediaHandler) listDir(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无法读取目录: " + err.Error()})
 		return
 	}
+	// 浏览器根目录（未指定 path 或等于 HomeDir）时注入「我的上传」虚拟目录项，
+	// 上传的视频可直接浏览播放，无需手动找路径（纯前端展示，不落盘）
+	cur := normalizePath(dir)
+	if cur == "" || samePath(cur, h.svc.Media.HomeDir()) {
+		list = append([]service.FileEntry{{
+			Name:  "📤 我的上传",
+			Path:  h.svc.Cfg.UploadsDir(),
+			IsDir: true,
+		}}, list...)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"path":    h.svc.Media.HomeDir(),
-		"current": normalizePath(dir),
+		"current": cur,
 		"up":      upPath(dir),
 		"items":   list,
 	})
+}
+
+// samePath 判断两个路径是否指向同一目录（清理后比较）。
+func samePath(a, b string) bool {
+	return filepath.Clean(a) == filepath.Clean(b)
 }
 
 // normalizePath 返回空串对应的实际根路径展示值。

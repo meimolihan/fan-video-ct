@@ -13,7 +13,8 @@
 - **片头片尾预设**：服务端持久化的预设库（名称 + 片头跳过秒 + 片尾跳过秒），一键回填起止时间（起点=片头，终点=总时长−片尾）；新增/编辑/删除预设，换浏览器/设备数据不丢失
 - **任务队列**：后台异步剪切，实时进度、支持取消与结果下载；并发数可配置
 - **封面管理**：默认首帧预览、截任意帧设封面、上传自定义封面、移除封面
-- **明暗主题**：亮/暗/跟随系统三态切换，持久化到浏览器
+- **视频上传**：工具栏「⬆ 上传」/ 整窗拖拽 / Ctrl+V 粘贴，上传到数据目录下「我的上传」（文件浏览器根目录有虚拟入口）；队列式多文件并发上传，带进度、取消与重试
+- **明暗主题**：首次访问跟随系统偏好，之后点击按钮在亮/暗间一键切换，持久化到浏览器
 - **单文件部署**：前端静态资源 `go:embed` 进二进制，无 Node/构建步骤；amd64 / arm64 二进制 + Docker multi-arch
 - **模式参考**：结构与发布链路沿用同仓库 `fan-video` / `fan-files` / `2panel` 项目惯例
 
@@ -135,6 +136,8 @@ docker run -d --name fan-video-ct -p 8788:8788 \
 | `app.data_dir` | `FCT_APP_DATA_DIR` | `./data` | 数据目录 |
 | `app.media_dir` | `FCT_APP_MEDIA_DIR` | 空 | 文件浏览器根目录 |
 | `app.output_dir` | `FCT_APP_OUTPUT_DIR` | `output`（相对数据目录） | 剪切输出目录 |
+| `app.upload_dir` | `FCT_APP_UPLOAD_DIR` | `uploads`（相对数据目录） | 上传视频存放目录 |
+| `app.upload_max_size` | `FCT_APP_UPLOAD_MAX_SIZE` | `10737418240`（10GB） | 单个上传视频大小上限（字节） |
 | `app.favicon` | `FCT_APP_FAVICON` | 空 | 自定义 favicon 路径（相对数据目录） |
 | `app.worker` | `FCT_APP_WORKER` | `1` | 剪切任务并发数 |
 | `ffmpeg.preset` | `FCT_FFMPEG_PRESET` | `veryfast` | 重编码预设 |
@@ -172,6 +175,18 @@ systemctl restart fan-video-ct
 - **持久化**：预设保存在服务端数据目录 `presets.json`（非浏览器 localStorage），换浏览器/设备不丢失；文件读写带并发锁（原子落盘），首次启动或文件缺失/损坏自动重建
 - **接口**：`GET /api/presets` 列表、`POST /api/presets` 新增/编辑（同名即更新）、`DELETE /api/presets/:name` 删除（中文名需 URL 编码）
 
+## 上传视频
+
+三种入口，目的目录统一为 `app.upload_dir`（默认 `<数据目录>/uploads`，文件浏览器根目录的「📤 我的上传」虚拟入口直达）：
+
+- **工具栏按钮**：文件面板头部「⬆ 上传」，多选视频文件
+- **整窗拖拽**：把文件拖进窗口任意位置，出现「松手即上传」遮罩，松手入队
+- **粘贴**：复制视频文件后 Ctrl+V（输入框聚焦时不拦截）
+
+队列能力：最多 2 个并发上传，每个文件独立进度条，支持取消（✕）与失败重试（↻）；仅视频扩展名（mp4/mkv/mov/avi 等，与浏览器白名单一致）会被接受，其余自动跳过。上传为流式落盘（先写 `.part` 临时文件、完成后原子重命名），中途取消不会残留半个文件；重名文件自动改名为 `name(1).mp4`，绝不覆盖已有文件。单个大小上限由 `app.upload_max_size` 控制（默认 10GB），超限在服务端直接断流拒绝。上传完成后自动跳转「我的上传」并打开第一个视频，随后即可播放、剪切、设封面。
+
+> Docker 部署同样开箱即用：上传目录位于数据卷 `<数据目录>/uploads` 内，原视频目录继续只读挂载（`:ro`）即可。
+
 ## HTTP API
 
 | 方法 | 路径 | 说明 |
@@ -182,6 +197,7 @@ systemctl restart fan-video-ct
 | GET | `/api/media/info?path=` | 探测媒体信息（时长/流/封面是否存在） |
 | GET | `/api/media/stream?path=` | 播放视频流（支持 Range） |
 | GET | `/api/media/keyframes?path=` | 关键帧时间点列表（快速剪切对齐用） |
+| POST | `/api/media/upload` | 上传视频（multipart 字段 `file`，目的目录固定为 `app.upload_dir`） |
 | POST | `/api/tasks` | 创建剪切任务 `{path, mode, start, end, output_name}` |
 | GET | `/api/tasks` / `/api/tasks/:id` | 任务列表 / 详情 |
 | DELETE | `/api/tasks/:id` / `/api/tasks` | 取消任务 / 清空已完成任务 |
@@ -203,7 +219,7 @@ systemctl restart fan-video-ct
 ```bash
 make build     # 编译
 make vet       # 静态检查
-make test      # 运行测试（当前无单测）
+make test      # 运行测试（version 归一化单测）
 make fmt       # 格式化
 ```
 
