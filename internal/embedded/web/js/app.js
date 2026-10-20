@@ -91,9 +91,36 @@
         (it.is_dir ? '' : `<span class="fsize">${fmtSize(it.size)}</span>`);
       div.onclick = () => it.is_dir ? loadDir(it.path) : selectVideo(it.path);
       if (!it.is_dir && it.path === state.path) div.classList.add('active');
+      // 仅后端判定可删除的条目才渲染删除按钮（应用自有目录内）
+      if (it.deletable) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'file-del';
+        del.title = '删除';
+        del.textContent = '🗑';
+        del.onclick = (e) => { e.stopPropagation(); removeEntry(it); };
+        div.appendChild(del);
+      }
       box.appendChild(div);
     });
     state.currentDir = data.current;
+  };
+
+  // 删除文件/目录：二次确认后调用后端，成功后重载当前目录
+  const removeEntry = (it) => {
+    const kind = it.is_dir ? '目录' : '文件';
+    const tip = it.is_dir ? '\n目录将连同其中的内容一并删除，此操作不可恢复。' : '';
+    if (!window.confirm(`确定删除${kind}「${it.name}」？${tip}`)) return;
+    fetch('/api/media/file?path=' + encodeURIComponent(it.path), { method: 'DELETE' })
+      .then((r) => r.json().then((d) => ({ status: r.status, d })))
+      .then(({ status, d }) => {
+        if (status !== 200 || d.error) { toast(d.error || '删除失败', 'err'); return; }
+        toast('已删除: ' + it.name);
+        // 删的是当前预览中的视频：先关闭播放器，避免留下失效的播放状态
+        if (!it.is_dir && state.path === it.path) closeVideo();
+        loadDir(state.currentDir);
+      })
+      .catch((e) => toast('删除失败: ' + e.message, 'err'));
   };
 
   const loadDir = (dir) => {

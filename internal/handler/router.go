@@ -72,6 +72,7 @@ func (h *Handler) Router() *gin.Engine {
 		api.GET("/media/info", h.media.info)
 		api.GET("/media/stream", h.media.stream)
 		api.GET("/media/keyframes", h.media.keyframes)
+		api.DELETE("/media/file", h.media.remove)
 		api.POST("/media/upload", h.upload.upload)
 
 		api.GET("/tasks", h.cut.list)

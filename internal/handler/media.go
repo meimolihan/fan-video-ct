@@ -103,6 +103,34 @@ func (h *mediaHandler) info(c *gin.Context) {
 	})
 }
 
+// remove 删除文件或目录 DELETE /api/media/file?path=
+// 目录按递归删除处理；路径须位于应用自有目录内（见 service.MediaService.Remove）。
+func (h *mediaHandler) remove(c *gin.Context) {
+	p := strings.TrimSpace(c.Query("path"))
+	if p == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 path 参数"})
+		return
+	}
+	// 先判定是否为目录：删除后视频已不存在，封面清理需据此跳过目录
+	st, err := os.Lstat(filepath.Clean(p))
+	isDir := err == nil && st.IsDir()
+
+	target, err := h.svc.Media.Remove(p)
+	if err != nil {
+		h.log.Warnf("删除失败 %s: %v", p, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// 视频被删除时同步移除其自定义封面，避免在 covers 目录留下孤儿文件
+	if !isDir {
+		if cerr := h.svc.Covers.Remove(target); cerr != nil {
+			h.log.Warnf("清理封面失败 %s: %v", target, cerr)
+		}
+	}
+	h.log.Infof("已删除: %s", target)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "path": target})
+}
+
 // keyframes 关键帧列表（供 copy 模式对齐） GET /api/media/keyframes?path=
 func (h *mediaHandler) keyframes(c *gin.Context) {
 	p := c.Query("path")

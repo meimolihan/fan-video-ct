@@ -185,6 +185,26 @@ body {
 }
 .file-up { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 
+/* 条目删除按钮：悬停浮现（触屏无 hover，见下方 @media (hover: none) 常驻显示） */
+.file-item .file-del {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+}
+.file-item:hover .file-del,
+.file-item.active .file-del,
+.file-item .file-del:focus-visible { opacity: 1; }
+.file-item .file-del:hover { color: var(--danger-fg); background: var(--dang-soft); }
+.file-item .file-del:focus-visible { outline: 1px solid var(--primary); }
+
 /* ===== 工作区 ===== */
 .workpanel { align-items: stretch; }
 .video-wrap {
@@ -738,6 +758,7 @@ img { max-width: 100%; }
   }
   .btn-sm { padding-top: 10px; padding-bottom: 10px; }
   .file-item, .file-up { padding-top: 10px; padding-bottom: 10px; }
+  .file-item .file-del { min-width: 32px; min-height: 32px; }
   .radio { align-items: center; }
   .cover-actions label.btn { display: inline-flex; align-items: center; }
   .cover-actions .btn,
@@ -750,6 +771,8 @@ img { max-width: 100%; }
   .btn-primary:hover { background: var(--primary); }
   .file-item:hover { background: transparent; }
   .radio:hover { background: transparent; }
+  /* 无 hover 能力的设备：删除按钮常驻可见，否则用户无法发现 */
+  .file-item .file-del { opacity: 1; }
 
   .btn:active { background: var(--hover-bg); transform: scale(.97); }
   .btn-primary:active { background: var(--primary-hover); }
