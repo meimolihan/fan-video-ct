@@ -1,13 +1,13 @@
-补全 Docker 映射目录
+日常更新
 
 ## Docker 安装
 ```bash
 docker pull mobufan/fan-video-ct:latest
-docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.6
+docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.7
 ```
 
 ```bash
-docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.6
+docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.7
 ```
 
 ## 二进制安装
