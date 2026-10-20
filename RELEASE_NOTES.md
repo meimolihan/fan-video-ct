@@ -1,13 +1,13 @@
-日常更新
+测试
 
 ## Docker 安装
 ```bash
 docker pull mobufan/fan-video-ct:latest
-docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.0.9
+docker run -d --name fan-video-ct -p 8788:8788 -v /var/lib/fan-video-ct:/data mobufan/fan-video-ct:v1.1.0
 ```
 
 ```bash
-docker pull ghcr.io/meimolihan/fan-video-ct:v1.0.9
+docker pull ghcr.io/meimolihan/fan-video-ct:v1.1.0
 ```
 
 ## 二进制安装
