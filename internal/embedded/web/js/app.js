@@ -73,6 +73,14 @@
   };
 
   /* ---------- 文件浏览器 ---------- */
+  // 删除图标：内联 SVG（viewBox 24×24，笔画 2px、圆角端点），风格与项目其他 SVG 一致
+  const delIcon =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>' +
+    '<path d="M10 11v6M14 11v6"/></svg>';
+
   const renderFileList = (data) => {
     const box = $('#file-list');
     box.innerHTML = '';
@@ -97,7 +105,9 @@
         del.type = 'button';
         del.className = 'file-del';
         del.title = '删除';
-        del.textContent = '🗑';
+        del.setAttribute('aria-label', '删除 ' + it.name);
+        // 内联 SVG 垃圾桶图标（继承 currentColor，跨平台一致，避免 emoji 渲染差异）
+        del.innerHTML = delIcon;
         del.onclick = (e) => { e.stopPropagation(); removeEntry(it); };
         div.appendChild(del);
       }

@@ -188,21 +188,25 @@ body {
 /* 条目删除按钮：悬停浮现（触屏无 hover，见下方 @media (hover: none) 常驻显示） */
 .file-item .file-del {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 3px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
-  line-height: 1;
+  line-height: 0;
   opacity: 0;
-  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease, transform .1s ease;
 }
+.file-item .file-del svg { display: block; }
 .file-item:hover .file-del,
 .file-item.active .file-del,
 .file-item .file-del:focus-visible { opacity: 1; }
 .file-item .file-del:hover { color: var(--danger-fg); background: var(--dang-soft); }
+.file-item .file-del:active { transform: scale(.92); }
 .file-item .file-del:focus-visible { outline: 1px solid var(--primary); }
 
 /* ===== 工作区 ===== */
