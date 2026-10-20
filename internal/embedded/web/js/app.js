@@ -1045,7 +1045,13 @@
   $('#btn-theme').addEventListener('click', () => {
     // 一步到位：暗色点一次即固定为亮色，亮色点一次即固定为暗色
     theme = effectiveDark() ? 'light' : 'dark';
-    applyTheme();
+    /* 明暗切换带「由屏幕中心向四周辐射」的波纹动画：View Transitions API
+       捕捉新旧两张快照，新主题快照以屏幕中心为圆心、用带 24% 羽化带的
+       径向渐变遮罩向外扩张铺满全屏（CSS 见 ::view-transition 规则）。
+       不支持该 API、或系统开启「减弱动效」时回退为即时切换。 */
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce) { applyTheme(); return; }
+    document.startViewTransition(() => applyTheme());
   });
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
     if (theme === 'auto') applyTheme();

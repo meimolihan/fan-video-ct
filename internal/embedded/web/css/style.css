@@ -2139,3 +2139,37 @@ html[data-theme="dark"] .save-opt.active .btn-danger { border-color: var(--dange
 .uq-status { font-size: 11px; color: var(--muted); }
 .uq-status.done { color: var(--ok); }
 .uq-status.error { color: var(--danger); }
+
+/* ==========================================================================
+   明暗主题切换 · 中心辐射羽化动画（View Transitions API，纯追加）
+   点击顶栏明暗按钮时，新旧页面各截一张快照：旧快照静止垫底，新主题快照
+   以屏幕中心为圆心向外扩张揭示。边缘不做锐利的圆形硬边，而用径向渐变遮罩
+   留出 24% 宽的羽化过渡带——波纹前沿柔和弥散（半径经 @property 注册为
+   <percentage>，支持逐帧插值）。末端 170% + 24% 羽化带确保覆盖最远角落；
+   并关闭 View Transitions 默认的整页交叉淡化。
+   不支持该 API 的浏览器、以及系统开启「减弱动效」时，由 JS 侧回退为即时
+   切换（见 js/app.js 明暗主题点击处理器），此处规则不生效、无副作用。
+   ========================================================================== */
+@property --theme-r {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-reveal 1.5s ease-out both;
+  mask-image: radial-gradient(circle at 50% 50%,
+    #000 var(--theme-r), transparent calc(var(--theme-r) + 24%));
+  -webkit-mask-image: radial-gradient(circle at 50% 50%,
+    #000 var(--theme-r), transparent calc(var(--theme-r) + 24%));
+}
+@keyframes theme-reveal {
+  from { --theme-r: 0%; }
+  to   { --theme-r: 170%; }
+}
