@@ -6,7 +6,7 @@ import (
 )
 
 // Version 由发布构建通过 -ldflags 注入；本地未注入时使用默认值。
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 // Current 返回当前应用版本（统一不含 v 前缀，展示层自行拼接 v）。
 // 优先级：FCT_VERSION > APP_VERSION > 内置 Version。
